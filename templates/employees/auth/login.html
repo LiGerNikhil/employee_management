@@ -1,0 +1,118 @@
+{% extends layout_path %}
+
+{% load static %}
+{% load i18n %}
+
+{% block title %}Employee Login | Employee Management System{% endblock %}
+
+{% block page_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static  'vendor/css/pages/page-auth.css' %}">
+{% endblock page_css %}
+
+{% block content %}
+  <div class="container-xxl">
+    <div class="authentication-wrapper authentication-basic container-p-y">
+      <div class="authentication-inner">
+        <div class="card px-sm-6 px-0">
+          <div class="card-body">
+            <!-- Logo -->
+            <div class="app-brand justify-content-center">
+              <a href="{% url 'employees:admin_dashboard' %}" class="app-brand-link gap-2">
+                <span class="app-brand-logo demo">{% include 'partials/logo.html' %}</span>
+                <span class="app-brand-text demo text-heading fw-bold">Employee Management</span>
+              </a>
+            </div>
+            <!-- /Logo -->
+            <h4 class="mb-1">Welcome to Employee Management System! 👋</h4>
+            <p class="mb-6">Please sign-in to your account</p>
+
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+
+            <form id="formAuthentication" class="mb-6" method="post">
+              {% csrf_token %}
+              {% if request.GET.next %}
+                <input type="hidden" name="next" value="{{ request.GET.next }}">
+              {% endif %}
+              <div class="mb-6">
+                <label for="email" class="form-label">Email or Username</label>
+                <input type="text" class="form-control" id="email" name="email-username"
+                       placeholder="Enter your email or username" autofocus="autofocus" required/>
+              </div>
+              <div class="mb-6 form-password-toggle">
+                <label class="form-label" for="password">Password</label>
+                <div class="input-group input-group-merge">
+                  <input type="password" id="password" class="form-control" name="password"
+                         placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;"
+                         aria-describedby="password" required/>
+                  <span class="input-group-text cursor-pointer">
+                    <i class="icon-base bx bx-hide"></i>
+                  </span>
+                </div>
+              </div>
+              <div class="mb-8">
+                <div class="d-flex justify-content-between">
+                  <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" id="remember-me"/>
+                    <label class="form-check-label" for="remember-me">
+                      Remember Me
+                    </label>
+                  </div>
+                  <a href="{% url 'admin:index' %}">
+                    <span>Forgot Password?</span>
+                  </a>
+                </div>
+              </div>
+              <div class="mb-6">
+                <button class="btn btn-primary d-grid w-100" type="submit">Sign In</button>
+              </div>
+            </form>
+
+            <div class="text-center">
+              <p class="mb-0">
+                <span>Superadmin? Access </span>
+                <a href="{% url 'admin:index' %}">
+                  <span>Django Admin</span>
+                </a>
+              </p>
+              <p class="mb-0">
+                <span>Need an account? Contact your </span>
+                <a href="{% url 'employees:employee_list' %}">
+                  <span>Administrator</span>
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% block page_js %}
+    {{ block.super }}
+    <script>
+      // Toggle password visibility
+      document.addEventListener('DOMContentLoaded', function() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.querySelector('.input-group-text');
+
+        toggleIcon.addEventListener('click', function() {
+          if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.querySelector('i').className = 'icon-base bx bx-show';
+          } else {
+            passwordInput.type = 'password';
+            toggleIcon.querySelector('i').className = 'icon-base bx bx-hide';
+          }
+        });
+      });
+    </script>
+  {% endblock %}
+{% endblock %}

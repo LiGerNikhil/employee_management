@@ -1,0 +1,81 @@
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+  <!-- ! Hide app brand if navbar-full -->
+  {% if not navbar_full %}
+  <div class="app-brand demo">
+    <a href="{% if user.is_superuser %}{% url 'employees:admin_dashboard' %}{% else %}{% url 'employees:employee_dashboard' %}{% endif %}" class="app-brand-link">
+      <span class="app-brand-logo demo">
+        {% include 'partials/logo.html'  %}
+      </span>
+    </a>
+
+    <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-block d-xl-none">
+      <i class="icon-base bx bx-chevron-left icon-sm d-flex align-items-center justify-content-center"></i>
+    </a>
+  </div>
+  {% endif %}
+
+
+  <div class="menu-inner-shadow"></div>
+
+  <ul class="menu-inner py-1">
+
+    <!-- Dashboard (Different for each role) -->
+    <li class="menu-item {% if 'dashboard' in request.resolver_match.url_name %}active{% endif %}">
+      <a href="{% if user.is_superuser %}{% url 'employees:admin_dashboard' %}{% else %}{% url 'employees:employee_dashboard' %}{% endif %}" class="menu-link">
+        <i class="menu-icon icon-base bx bx-home-smile"></i>
+        <div class="text-truncate">My Dashboard</div>
+      </a>
+    </li>
+
+    {% if user.is_superuser %}
+      <!-- Admin Only Navigation -->
+      <li class="menu-item {% if '/employees/' in request.path and 'create' not in request.path %}active{% endif %}">
+        <a href="{% url 'employees:employee_list' %}" class="menu-link">
+          <i class="menu-icon icon-base bx bx-user"></i>
+          <div class="text-truncate">All Employees</div>
+        </a>
+      </li>
+
+      <li class="menu-item {% if '/employees/create/' in request.path %}active{% endif %}">
+        <a href="{% url 'employees:employee_create' %}" class="menu-link">
+          <i class="menu-icon icon-base bx bx-user-plus"></i>
+          <div class="text-truncate">Add Employee</div>
+        </a>
+      </li>
+
+      <li class="menu-item {% if '/attendance/' in request.path %}active{% endif %}">
+        <a href="{% url 'employees:attendance_list' %}" class="menu-link">
+          <i class="menu-icon icon-base bx bx-time-five"></i>
+          <div class="text-truncate">Attendance</div>
+        </a>
+      </li>
+
+    {% else %}
+      <!-- Employee Only Navigation -->
+      <li class="menu-item {% if '/check-in/' in request.path %}active{% endif %}">
+        <a href="{% url 'employees:check_in' %}" class="menu-link">
+          <i class="menu-icon icon-base bx bx-check-circle"></i>
+          <div class="text-truncate">Check In</div>
+        </a>
+      </li>
+
+    {% endif %}
+
+    <!-- Profile (Available to both) -->
+    <li class="menu-item {% if '/profile/' in request.path %}active{% endif %}">
+      <a href="{% url 'employees:employee_profile' %}" class="menu-link">
+        <i class="menu-icon icon-base bx bx-user-circle"></i>
+        <div class="text-truncate">My Profile</div>
+      </a>
+    </li>
+
+    <li class="menu-item">
+      <a href="http://127.0.0.1:8000/" class="menu-link">
+        <i class="menu-icon icon-base bx bx-home"></i>
+        <div class="text-truncate">Back to Main Site</div>
+      </a>
+    </li>
+
+  </ul>
+
+</aside>

@@ -1,0 +1,332 @@
+{% extends layout_path %}
+
+{% load static %}
+{% load i18n %}
+{% load widget_tweaks %}
+
+{% block title %}
+  {% if title %}{{ title }}{% else %}Employee Form{% endif %} | {% get_theme_variables 'template_name' %} - {% get_theme_variables 'template_suffix' %}
+{% endblock %}
+
+{% block vendor_css %}
+  {{ block.super }}
+{% endblock vendor_css %}
+
+{% block content %}
+  <div class="row justify-content-center">
+    <div class="col-xl-8 col-lg-10 col-md-12">
+      <div class="card">
+        <div class="card-header">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <h5 class="card-title m-0">
+                {% if title %}{{ title }}{% else %}Employee Information{% endif %}
+              </h5>
+              <small class="text-muted">
+                {% if form.instance.pk %}Update employee details{% else %}Add new employee to the system{% endif %}
+              </small>
+            </div>
+            <a href="{% url 'employees:employee_list' %}" class="btn btn-outline-secondary btn-sm">
+              <i class="icon-base bx bx-arrow-back me-1"></i>Back to List
+            </a>
+          </div>
+        </div>
+
+        <div class="card-body">
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+
+            <!-- Basic Information -->
+            <div class="row mb-4">
+              <div class="col-12">
+                <h6 class="text-primary mb-3">Basic Information</h6>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.name.id_for_label }}" class="form-label">
+                  {{ form.name.label }}
+                  {% if form.name.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.name class="form-control" %}
+                {% if form.name.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.name.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.name.help_text %}
+                  <small class="text-muted">{{ form.name.help_text }}</small>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.full_name.id_for_label }}" class="form-label">
+                  {{ form.full_name.label }}
+                  {% if form.full_name.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.full_name class="form-control" %}
+                {% if form.full_name.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.full_name.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.full_name.help_text %}
+                  <small class="text-muted">{{ form.full_name.help_text }}</small>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.email.id_for_label }}" class="form-label">
+                  {{ form.email.label }}
+                  {% if form.email.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.email class="form-control" %}
+                {% if form.email.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.email.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.email.help_text %}
+                  <small class="text-muted">{{ form.email.help_text }}</small>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.contact.id_for_label }}" class="form-label">
+                  {{ form.contact.label }}
+                  {% if form.contact.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.contact class="form-control" %}
+                {% if form.contact.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.contact.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.contact.help_text %}
+                  <small class="text-muted">{{ form.contact.help_text }}</small>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Financial Information -->
+            <div class="row mb-4">
+              <div class="col-12">
+                <h6 class="text-primary mb-3">Financial Information</h6>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.aadhar_card_number.id_for_label }}" class="form-label">
+                  {{ form.aadhar_card_number.label }}
+                  {% if form.aadhar_card_number.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.aadhar_card_number class="form-control" maxlength="12" %}
+                {% if form.aadhar_card_number.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.aadhar_card_number.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.aadhar_card_number.help_text %}
+                  <small class="text-muted">{{ form.aadhar_card_number.help_text }}</small>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.pan_card.id_for_label }}" class="form-label">
+                  {{ form.pan_card.label }}
+                  {% if form.pan_card.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.pan_card class="form-control" maxlength="10" style="text-transform: uppercase;" %}
+                {% if form.pan_card.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.pan_card.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.pan_card.help_text %}
+                  <small class="text-muted">{{ form.pan_card.help_text }}</small>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.account_number.id_for_label }}" class="form-label">
+                  {{ form.account_number.label }}
+                  {% if form.account_number.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.account_number class="form-control" %}
+                {% if form.account_number.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.account_number.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.account_number.help_text %}
+                  <small class="text-muted">{{ form.account_number.help_text }}</small>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.ifsc_code.id_for_label }}" class="form-label">
+                  {{ form.ifsc_code.label }}
+                  {% if form.ifsc_code.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.ifsc_code class="form-control" maxlength="11" style="text-transform: uppercase;" %}
+                {% if form.ifsc_code.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.ifsc_code.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.ifsc_code.help_text %}
+                  <small class="text-muted">{{ form.ifsc_code.help_text }}</small>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Profile Picture -->
+            <div class="row mb-4">
+              <div class="col-12">
+                <h6 class="text-primary mb-3">Profile Picture</h6>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.profile_picture.id_for_label }}" class="form-label">
+                  {{ form.profile_picture.label }}
+                  {% if form.profile_picture.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.profile_picture class="form-control" %}
+                {% if form.profile_picture.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.profile_picture.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.profile_picture.help_text %}
+                  <small class="text-muted">{{ form.profile_picture.help_text }}</small>
+                {% endif %}
+              </div>
+              {% if form.instance.profile_picture %}
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Current Profile Picture</label>
+                  <div>
+                    <img src="{{ form.instance.profile_picture.url }}" alt="Current Profile" class="rounded-circle" style="width: 100px; height: 100px; object-fit: cover;">
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Password (only for new employees) -->
+            {% if not form.instance.pk %}
+              <div class="row mb-4">
+                <div class="col-12">
+                  <h6 class="text-primary mb-3">Account Password</h6>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.password.id_for_label }}" class="form-label">
+                    {{ form.password.label }}
+                    <span class="text-danger">*</span>
+                  </label>
+                  {% render_field form.password class="form-control" %}
+                  {% if form.password.errors %}
+                    <div class="text-danger small mt-1">
+                      {% for error in form.password.errors %}
+                        {{ error }}
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                  {% if form.password.help_text %}
+                    <small class="text-muted">{{ form.password.help_text }}</small>
+                  {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.confirm_password.id_for_label }}" class="form-label">
+                    Confirm Password
+                    <span class="text-danger">*</span>
+                  </label>
+                  {% render_field form.confirm_password class="form-control" %}
+                  {% if form.confirm_password.errors %}
+                    <div class="text-danger small mt-1">
+                      {% for error in form.confirm_password.errors %}
+                        {{ error }}
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                  {% if form.confirm_password.help_text %}
+                    <small class="text-muted">{{ form.confirm_password.help_text }}</small>
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
+
+            <!-- Form Actions -->
+            <div class="row">
+              <div class="col-12">
+                <div class="d-flex justify-content-end gap-3">
+                  <a href="{% url 'employees:employee_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                  <button type="submit" class="btn btn-primary">
+                    {% if form.instance.pk %}
+                      <i class="icon-base bx bx-save me-1"></i>Update Employee
+                    {% else %}
+                      <i class="icon-base bx bx-plus me-1"></i>Create Employee
+                    {% endif %}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block page_js %}
+  {{ block.super }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Auto-format PAN card to uppercase
+      const panInput = document.getElementById('{{ form.pan_card.id_for_label }}');
+      if (panInput) {
+        panInput.addEventListener('input', function() {
+          this.value = this.value.toUpperCase();
+        });
+      }
+
+      // Auto-format IFSC code to uppercase
+      const ifscInput = document.getElementById('{{ form.ifsc_code.id_for_label }}');
+      if (ifscInput) {
+        ifscInput.addEventListener('input', function() {
+          this.value = this.value.toUpperCase();
+        });
+      }
+
+      // Format Aadhar number to only numbers
+      const aadharInput = document.getElementById('{{ form.aadhar_card_number.id_for_label }}');
+      if (aadharInput) {
+        aadharInput.addEventListener('input', function() {
+          this.value = this.value.replace(/\D/g, '');
+        });
+      }
+
+      // Format account number to only numbers
+      const accountInput = document.getElementById('{{ form.account_number.id_for_label }}');
+      if (accountInput) {
+        accountInput.addEventListener('input', function() {
+          this.value = this.value.replace(/\D/g, '');
+        });
+      }
+    });
+  </script>
+{% endblock %}

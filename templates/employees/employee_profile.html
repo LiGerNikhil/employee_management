@@ -1,0 +1,125 @@
+{% extends layout_path %}
+
+{% load static %}
+{% load i18n %}
+
+{% block title %}My Profile | {% get_theme_variables 'template_name' %} - {% get_theme_variables 'template_suffix' %}{% endblock %}
+
+{% block content %}
+  <div class="row justify-content-center">
+    <div class="col-xl-8 col-lg-10 col-md-12">
+      <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <div>
+            <h5 class="card-title m-0">My Profile</h5>
+            <small class="text-muted">View and manage your personal information</small>
+          </div>
+          <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="icon-base bx bx-arrow-back me-1"></i>Back to Dashboard
+          </a>
+        </div>
+
+        <div class="card-body">
+          <div class="row">
+            <!-- Profile Picture Section -->
+            <div class="col-md-4 text-center mb-4">
+              <div class="avatar avatar-xl mb-3">
+                {% if employee.profile_picture %}
+                  <img src="{{ employee.profile_picture.url }}" alt="Profile Picture" class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover;">
+                {% else %}
+                  <div class="avatar-initial bg-label-primary rounded-circle" style="width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; font-size: 48px;">
+                    {{ employee.name|first|upper }}
+                  </div>
+                {% endif %}
+              </div>
+              <p class="text-muted mb-0">{{ employee.full_name }}</p>
+              <small class="text-muted">{{ employee.email }}</small>
+            </div>
+
+            <!-- Profile Information -->
+            <div class="col-md-8">
+              <!-- Basic Information -->
+              <div class="row mb-4">
+                <div class="col-12">
+                  <h6 class="text-primary mb-3">Basic Information</h6>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label text-muted">First Name</label>
+                  <p class="mb-0">{{ employee.name }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label text-muted">Full Name</label>
+                  <p class="mb-0">{{ employee.full_name }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label text-muted">Email Address</label>
+                  <p class="mb-0">{{ employee.email }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label text-muted">Contact Number</label>
+                  <p class="mb-0">{{ employee.contact }}</p>
+                </div>
+              </div>
+
+              <!-- Financial Information -->
+              <div class="row mb-4">
+                <div class="col-12">
+                  <h6 class="text-primary mb-3">Financial Information</h6>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label text-muted">Aadhar Card</label>
+                  <p class="mb-0">{{ employee.aadhar_card_number|slice:":4" }}****{{ employee.aadhar_card_number|slice:"-4:" }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label text-muted">PAN Card</label>
+                  <p class="mb-0">{{ employee.pan_card }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label text-muted">Account Number</label>
+                  <p class="mb-0">{{ employee.account_number|slice:":4" }}****{{ employee.account_number|slice:"-4:" }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label text-muted">IFSC Code</label>
+                  <p class="mb-0">{{ employee.ifsc_code }}</p>
+                </div>
+              </div>
+
+              <!-- Account Information -->
+              <div class="row mb-4">
+                <div class="col-12">
+                  <h6 class="text-primary mb-3">Account Information</h6>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label text-muted">Member Since</label>
+                  <p class="mb-0">{{ employee.created_at|date:"M d, Y" }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label text-muted">Last Updated</label>
+                  <p class="mb-0">{{ employee.updated_at|date:"M d, Y" }}</p>
+                </div>
+              </div>
+
+              <!-- Quick Actions -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="text-primary mb-3">Quick Actions</h6>
+                  <div class="d-flex gap-3 flex-wrap">
+                    <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-outline-primary btn-sm">
+                      <i class="icon-base bx bx-home me-1"></i>Dashboard
+                    </a>
+                    <a href="{% url 'employees:check_in' %}" class="btn btn-outline-success btn-sm">
+                      <i class="icon-base bx bx-check-circle me-1"></i>Check In
+                    </a>
+                    <a href="{% url 'employees:logout' %}" class="btn btn-outline-warning btn-sm">
+                      <i class="icon-base bx bx-power-off me-1"></i>Logout
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

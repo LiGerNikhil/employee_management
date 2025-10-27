@@ -1,0 +1,126 @@
+{% extends layout_path %}
+
+{% load static %}
+{% load i18n %}
+
+{% block title %}Check In | {% get_theme_variables 'template_name' %} - {% get_theme_variables 'template_suffix' %}{% endblock %}
+
+{% block content %}
+  <div class="row justify-content-center">
+    <div class="col-xl-6 col-lg-8 col-md-10">
+      <div class="card">
+        <div class="card-header text-center">
+          <h5 class="card-title m-0">Daily Check-in</h5>
+          <small class="text-muted">Mark your attendance for today</small>
+        </div>
+
+        <div class="card-body text-center">
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          {% if not has_checked_in_today %}
+            <div class="mb-4">
+              <div class="avatar avatar-xl mb-3 mx-auto">
+                <div class="avatar-initial bg-label-success rounded-circle" style="width: 100px; height: 100px; display: flex; align-items: center; justify-content: center;">
+                  <i class="icon-base bx bx-check-circle icon-48px"></i>
+                </div>
+              </div>
+              <h4 class="mb-2">Ready to Check In?</h4>
+              <p class="text-muted mb-4">
+                Welcome, {{ employee.name }}! Please confirm your check-in for today.
+              </p>
+
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <div class="border rounded p-3">
+                    <h6 class="mb-1">Date</h6>
+                    <span class="fw-medium">{{ date_today|date:"l, M d, Y" }}</span>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="border rounded p-3">
+                    <h6 class="mb-1">Time</h6>
+                    <span class="fw-medium">{{ current_time|time:"H:i:s" }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <form method="post">
+                {% csrf_token %}
+                <div class="d-flex justify-content-center gap-3">
+                  <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="icon-base bx bx-x me-1"></i>Cancel
+                  </a>
+                  <button type="submit" class="btn btn-success btn-lg">
+                    <i class="icon-base bx bx-check-circle me-1"></i>Check In Now
+                  </button>
+                </div>
+              </form>
+            </div>
+          {% else %}
+            <div class="mb-4">
+              <div class="avatar avatar-xl mb-3 mx-auto">
+                <div class="avatar-initial bg-label-warning rounded-circle" style="width: 100px; height: 100px; display: flex; align-items: center; justify-content: center;">
+                  <i class="icon-base bx bx-time-five icon-48px"></i>
+                </div>
+              </div>
+              <h4 class="mb-2">Already Checked In</h4>
+              <p class="text-muted mb-4">
+                You have already checked in today, {{ employee.name }}.
+              </p>
+
+              {% if today_attendance %}
+                <div class="alert alert-success">
+                  <h6 class="alert-heading mb-2">
+                    <i class="icon-base bx bx-check-circle me-1"></i>Check-in Details
+                  </h6>
+                  <p class="mb-1">
+                    <strong>Date:</strong> {{ today_attendance.date|date:"l, M d, Y" }}
+                  </p>
+                  <p class="mb-0">
+                    <strong>Time:</strong> {{ today_attendance.check_in_time|time:"H:i:s" }}
+                  </p>
+                </div>
+              {% endif %}
+
+              <div class="d-flex justify-content-center gap-3">
+                <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-primary">
+                  <i class="icon-base bx bx-home me-1"></i>Back to Dashboard
+                </a>
+                <a href="{% url 'employees:employee_profile' %}" class="btn btn-outline-primary">
+                  <i class="icon-base bx bx-user me-1"></i>View Profile
+                </a>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block page_js %}
+  {{ block.super }}
+  <script>
+    // Auto refresh current time
+    document.addEventListener('DOMContentLoaded', function() {
+      function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString();
+        const timeElement = document.querySelector('.fw-medium');
+        if (timeElement && timeElement.textContent.includes(':')) {
+          timeElement.textContent = timeString;
+        }
+      }
+
+      // Update time every second
+      setInterval(updateTime, 1000);
+    });
+  </script>
+{% endblock %}

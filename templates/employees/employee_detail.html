@@ -1,0 +1,302 @@
+{% extends layout_path %}
+
+{% load static %}
+
+{% block title %}Employee Details | Kwikster CRM{% endblock %}
+
+{% block vendor_css %}
+  {{ block.super }}
+{% endblock vendor_css %}
+
+{% block content %}
+  <div class="row">
+    <!-- Employee Header -->
+    <div class="col-12 mb-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <div class="avatar avatar-xl me-4">
+                {% if employee.profile_picture %}
+                  <img src="{{ employee.profile_picture.url }}" alt="Profile" class="rounded-circle">
+                {% else %}
+                  <div class="avatar-initial bg-label-primary rounded-circle">
+                    {{ employee.name|first|upper }}
+                  </div>
+                {% endif %}
+              </div>
+              <div>
+                <h4 class="mb-1">{{ employee.full_name }}</h4>
+                <p class="text-muted mb-2">{{ employee.email }}</p>
+                <div class="d-flex align-items-center">
+                  <span class="badge bg-label-success me-2">Active Employee</span>
+                  <small class="text-muted">Joined {{ employee.created_at|date:"M d, Y" }}</small>
+                </div>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="{% url 'employees:employee_update' employee.pk %}" class="btn btn-outline-primary">
+                <i class="icon-base bx bx-edit-alt me-1"></i>Edit Employee
+              </a>
+              <a href="{% url 'employees:employee_list' %}" class="btn btn-outline-secondary">
+                <i class="icon-base bx bx-arrow-back me-1"></i>Back to List
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Personal Information -->
+    <div class="col-xl-6 col-lg-12 col-md-12 mb-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <h5 class="card-title m-0">Personal Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-sm-4">
+              <strong>Full Name:</strong>
+            </div>
+            <div class="col-sm-8">
+              {{ employee.full_name }}
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-sm-4">
+              <strong>Email:</strong>
+            </div>
+            <div class="col-sm-8">
+              {{ employee.email }}
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-sm-4">
+              <strong>Phone:</strong>
+            </div>
+            <div class="col-sm-8">
+              {{ employee.contact }}
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-sm-4">
+              <strong>Aadhar Number:</strong>
+            </div>
+            <div class="col-sm-8">
+              {{ employee.aadhar_card_number|slice:":4" }}****{{ employee.aadhar_card_number|slice:"-4:" }}
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-sm-4">
+              <strong>PAN Card:</strong>
+            </div>
+            <div class="col-sm-8">
+              {{ employee.pan_card }}
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-sm-4">
+              <strong>Bank Account:</strong>
+            </div>
+            <div class="col-sm-8">
+              {{ employee.account_number|slice:":4" }}****{{ employee.account_number|slice:"-4:" }}
+              <br>
+              <small class="text-muted">IFSC: {{ employee.ifsc_code }}</small>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-sm-4">
+              <strong>Member Since:</strong>
+            </div>
+            <div class="col-sm-8">
+              {{ employee.created_at|date:"M d, Y" }} ({{ employee.created_at|timesince }} ago)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Statistics -->
+    <div class="col-xl-6 col-lg-12 col-md-12 mb-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <h5 class="card-title m-0">Attendance Statistics</h5>
+        </div>
+        <div class="card-body">
+          <div class="row text-center mb-4">
+            <div class="col-4">
+              <div class="avatar mx-auto mb-2" style="width: 60px; height: 60px;">
+                <div class="avatar-initial bg-label-primary rounded">
+                  <i class="icon-base bx bx-calendar-check icon-24px"></i>
+                </div>
+              </div>
+              <h4 class="mb-1">{{ total_attendance }}</h4>
+              <small class="text-muted">Total Check-ins</small>
+            </div>
+
+            <div class="col-4">
+              <div class="avatar mx-auto mb-2" style="width: 60px; height: 60px;">
+                <div class="avatar-initial bg-label-info rounded">
+                  <i class="icon-base bx bx-calendar icon-24px"></i>
+                </div>
+              </div>
+              <h4 class="mb-1">{{ current_month_attendance }}</h4>
+              <small class="text-muted">This Month</small>
+            </div>
+
+            <div class="col-4">
+              <div class="avatar mx-auto mb-2" style="width: 60px; height: 60px;">
+                <div class="avatar-initial bg-label-success rounded">
+                  <i class="icon-base bx bx-time-five icon-24px"></i>
+                </div>
+              </div>
+              <h4 class="mb-1">{{ week_attendance|length }}</h4>
+              <small class="text-muted">This Week</small>
+            </div>
+          </div>
+
+          {% if recent_attendance %}
+            <div class="mt-4">
+              <h6 class="mb-3">Recent Check-ins</h6>
+              {% for attendance in recent_attendance|slice:":5" %}
+                <div class="d-flex align-items-center mb-3">
+                  <div class="avatar avatar-sm me-3">
+                    <div class="avatar-initial bg-label-success rounded-circle">
+                      <i class="icon-base bx bx-check icon-16px"></i>
+                    </div>
+                  </div>
+                  <div class="flex-grow-1">
+                    <span class="fw-medium">{{ attendance.date|date:"l, M d, Y" }}</span>
+                  </div>
+                  <small class="text-success">{{ attendance.check_in_time|time:"H:i" }}</small>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-4">
+              <i class="icon-base bx bx-time-five icon-48px text-muted mb-3"></i>
+              <p class="text-muted">No check-ins yet</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="row">
+    <div class="col-12 mb-6">
+      <div class="card h-100">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <h5 class="card-title m-0">Recent Attendance History</h5>
+          <a href="{% url 'employees:attendance_list' %}?employee={{ employee.pk }}" class="btn btn-sm btn-outline-primary">
+            View All Attendance
+          </a>
+        </div>
+        <div class="card-body">
+          {% if recent_attendance %}
+            <div class="table-responsive">
+              <table class="table table-borderless">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Day</th>
+                    <th>Check-in Time</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for attendance in recent_attendance %}
+                    <tr>
+                      <td>
+                        <span class="fw-medium">{{ attendance.date|date:"M d, Y" }}</span>
+                      </td>
+                      <td>
+                        <span class="fw-medium">{{ attendance.date|date:"l" }}</span>
+                      </td>
+                      <td>
+                        <span class="fw-medium">{{ attendance.check_in_time|time:"H:i" }}</span>
+                      </td>
+                      <td>
+                        {% if attendance.date|date:"Y-m-d" == today|date:"Y-m-d" %}
+                          <span class="badge bg-label-success">Today</span>
+                        {% else %}
+                          <span class="badge bg-label-secondary">Past</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="text-center py-4">
+              <i class="icon-base bx bx-time-five icon-48px text-muted mb-3"></i>
+              <p class="text-muted mb-3">No attendance records yet</p>
+              <small class="text-muted">This employee hasn't checked in yet.</small>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title m-0">Quick Actions</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-3 col-sm-6">
+              <a href="{% url 'employees:employee_update' employee.pk %}" class="text-decoration-none">
+                <div class="border rounded p-3 text-center h-100">
+                  <i class="icon-base bx bx-edit-alt icon-24px text-primary mb-2"></i>
+                  <h6 class="mb-1">Edit Employee</h6>
+                  <small class="text-muted">Update employee information</small>
+                </div>
+              </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+              <a href="{% url 'employees:attendance_list' %}?employee={{ employee.pk }}" class="text-decoration-none">
+                <div class="border rounded p-3 text-center h-100">
+                  <i class="icon-base bx bx-time-five icon-24px text-info mb-2"></i>
+                  <h6 class="mb-1">View Attendance</h6>
+                  <small class="text-muted">See all check-in records</small>
+                </div>
+              </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+              <a href="{% url 'employees:employee_list' %}" class="text-decoration-none">
+                <div class="border rounded p-3 text-center h-100">
+                  <i class="icon-base bx bx-arrow-back icon-24px text-secondary mb-2"></i>
+                  <h6 class="mb-1">Back to List</h6>
+                  <small class="text-muted">Return to employees list</small>
+                </div>
+              </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+              <a href="{% url 'employees:admin_dashboard' %}" class="text-decoration-none">
+                <div class="border rounded p-3 text-center h-100">
+                  <i class="icon-base bx bx-home icon-24px text-success mb-2"></i>
+                  <h6 class="mb-1">Admin Dashboard</h6>
+                  <small class="text-muted">Go to admin panel</small>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
