@@ -8,3 +8,5 @@ sqlparse==0.5.3
 typing-extensions==4.14.1
 whitenoise==6.9.0
 pillow
+opencv-python
+face_recognition

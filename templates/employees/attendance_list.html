@@ -3,7 +3,7 @@
 {% load static %}
 {% load i18n %}
 
-{% block title %}Attendance Management | {% get_theme_variables 'template_name' %} - {% get_theme_variables 'template_suffix' %}{% endblock %}
+{% block title %}Attendance Records | Kwikster CRM{% endblock %}
 
 {% block vendor_css %}
   {{ block.super }}
@@ -99,6 +99,7 @@
                     <th>Employee</th>
                     <th>Date</th>
                     <th>Check-in Time</th>
+                    <th>Photo</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -131,6 +132,33 @@
                         <span class="fw-medium">{{ record.check_in_time|time:"H:i:s" }}</span>
                         <br>
                         <small class="text-muted">{{ record.check_in_time|timesince }} ago</small>
+                      </td>
+                      <td>
+                        {% if record.check_in_photo %}
+                          <img src="{{ record.check_in_photo.url }}" alt="Check-in photo" class="attendance-photo-preview" data-bs-toggle="modal" data-bs-target="#photoModal{{ record.id }}" style="cursor: pointer;">
+                          <!-- Modal for full-size photo -->
+                          <div class="modal fade" id="photoModal{{ record.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                              <div class="modal-content">
+                                <div class="modal-header">
+                                  <h5 class="modal-title">{{ record.employee.full_name }} - Check-in Photo</h5>
+                                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body text-center">
+                                  <img src="{{ record.check_in_photo.url }}" alt="Check-in photo" class="img-fluid rounded">
+                                  <div class="mt-3">
+                                    <p class="mb-1"><strong>Date:</strong> {{ record.date|date:"l, M d, Y" }}</p>
+                                    <p class="mb-0"><strong>Time:</strong> {{ record.check_in_time|time:"H:i:s" }}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        {% else %}
+                          <span class="text-muted">
+                            <i class="icon-base bx bx-camera-off"></i> No photo
+                          </span>
+                        {% endif %}
                       </td>
                       <td>
                         {% if record.date|date:"Y-m-d" == today|date:"Y-m-d" %}
@@ -212,3 +240,25 @@
     });
   </script>
 {% endblock %}
+
+<style>
+  .attendance-photo-preview {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    transition: transform 0.2s ease;
+  }
+
+  .attendance-photo-preview:hover {
+    transform: scale(1.1);
+    border-color: #0d6efd;
+  }
+
+  .modal img {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+  }
+</style>

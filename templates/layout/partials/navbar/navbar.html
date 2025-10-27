@@ -66,7 +66,7 @@
             <div class="dropdown-divider my-1"></div>
           </li>
           <li>
-            <a class="dropdown-item" href="{% url 'employees:employee_profile' %}">
+            <a class="dropdown-item" href="{% if user.is_superuser %}{% url 'employees:superadmin_profile' %}{% else %}{% url 'employees:employee_profile' %}{% endif %}">
               <i class="icon-base bx bx-user icon-md me-3"></i><span>My Profile</span>
             </a>
           </li>

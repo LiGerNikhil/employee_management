@@ -13,7 +13,7 @@ from web_project import TemplateLayout
 from web_project.template_helpers.theme import TemplateHelper
 
 from .models import Employee, Attendance
-from .forms import EmployeeForm, EmployeeUpdateForm
+from .forms import EmployeeForm, EmployeeUpdateForm, SuperAdminProfileForm
 
 
 # Helper functions to check user roles
@@ -257,7 +257,9 @@ class EmployeeCreateView(CreateView):
             username=form.cleaned_data['email'],
             email=form.cleaned_data['email'],
             first_name=form.cleaned_data['name'],
-            password=password
+            password=password,
+            is_staff=True,  # Assign staff status to employee
+            is_active=True  # Ensure employee account is active
         )
 
         # Link employee to user and save
@@ -265,7 +267,23 @@ class EmployeeCreateView(CreateView):
         employee.user = user
         employee.save()
 
-        messages.success(self.request, 'Employee created successfully!')
+        # Process face encoding if profile picture is provided
+        if employee.profile_picture:
+            try:
+                from .face_utils import process_and_store_face_encoding
+                result = process_and_store_face_encoding(employee, employee.profile_picture.path)
+                
+                if result['success']:
+                    messages.success(self.request, f'✓ Employee created successfully with face recognition! {result["message"]}')
+                else:
+                    messages.warning(self.request, f'⚠ Employee created but face registration failed: {result["message"]} You can update the profile picture later to register the face.')
+            except ImportError as e:
+                messages.warning(self.request, '⚠ Employee created successfully, but face recognition library is not installed. To enable face verification, please install: pip install face_recognition')
+            except Exception as e:
+                messages.warning(self.request, f'⚠ Employee created but face processing error: {str(e)}. You can update the profile picture later to register the face.')
+        else:
+            messages.success(self.request, '✓ Employee created successfully with staff access!')
+        
         return super().form_valid(form)
 
 
@@ -285,8 +303,37 @@ class EmployeeUpdateView(UpdateView):
         })
         return context
 
+    def form_valid(self, form):
+        # Check if profile picture was updated
+        old_profile_picture = None
+        if self.object.pk:
+            old_employee = Employee.objects.get(pk=self.object.pk)
+            old_profile_picture = old_employee.profile_picture
+        
+        # Save the form
+        response = super().form_valid(form)
+        employee = self.object
+        
+        # Process face encoding if profile picture was changed
+        if employee.profile_picture and employee.profile_picture != old_profile_picture:
+            try:
+                from .face_utils import process_and_store_face_encoding
+                result = process_and_store_face_encoding(employee, employee.profile_picture.path)
+                
+                if result['success']:
+                    messages.success(self.request, f'Employee updated successfully! {result["message"]}')
+                else:
+                    messages.warning(self.request, f'Employee updated but face registration failed: {result["message"]}')
+            except ImportError:
+                messages.warning(self.request, 'Employee updated but face recognition library not available.')
+            except Exception as e:
+                messages.warning(self.request, f'Employee updated but face processing error: {str(e)}')
+        else:
+            messages.success(self.request, 'Employee updated successfully!')
+        
+        return response
+
     def get_success_url(self):
-        messages.success(self.request, 'Employee updated successfully!')
         return reverse_lazy('employees:employee_list')
 
 
@@ -314,7 +361,31 @@ class EmployeeDeleteView(DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-# Employee Detail View (for super-admins to view employee details)
+# Employee Status Toggle View (for super-admins to activate/deactivate employees)
+@login_required
+@user_passes_test(is_superadmin)
+def employee_toggle_status(request, pk):
+    """Toggle employee active/inactive status (Super-admin only)"""
+    employee = get_object_or_404(Employee, pk=pk)
+
+    if request.method == 'POST':
+        # Toggle the user's active status
+        employee.user.is_active = not employee.user.is_active
+        employee.user.save()
+
+        status = "activated" if employee.user.is_active else "deactivated"
+        messages.success(request, f'Employee {employee.full_name} has been {status} successfully!')
+
+        # Redirect back to the page that made the request
+        referer = request.META.get('HTTP_REFERER')
+        if referer and 'employee_list' in referer:
+            return redirect('employees:employee_list')
+        else:
+            return redirect('employees:employee_detail', pk=pk)
+
+    # If not POST, redirect back
+    messages.error(request, 'Invalid request method.')
+    return redirect('employees:employee_list')
 @login_required
 @user_passes_test(is_superadmin)
 def employee_detail(request, pk):
@@ -352,10 +423,16 @@ def employee_detail(request, pk):
         'today': timezone.now().date(),
     })
     return render(request, 'employees/employee_detail.html', context)
+
+# Employee Profile View (for employees to view their own profile)
 @login_required
 @user_passes_test(is_employee)
 def employee_profile(request):
     """Employee profile view"""
+    # Redirect superadmins to their profile
+    if request.user.is_superuser:
+        return redirect('employees:superadmin_profile')
+
     employee = request.user.employee_profile
     context = TemplateLayout.init(self={}, context={})
     context.update({
@@ -365,30 +442,119 @@ def employee_profile(request):
     return render(request, 'employees/employee_profile.html', context)
 
 
-# Check-in Views
+# SuperAdmin Profile Views
+@login_required
+@user_passes_test(is_superadmin)
+def superadmin_profile(request):
+    """SuperAdmin profile view"""
+    user = request.user
+    from django.utils import timezone
+
+    # Get statistics for superadmin dashboard
+    total_employees = Employee.objects.count()
+    today_checkins = Attendance.objects.filter(date=timezone.now().date()).count()
+
+    context = TemplateLayout.init(self={}, context={})
+    context.update({
+        'layout_path': TemplateHelper.set_layout('layout_vertical.html', context),
+        'user': user,
+        'total_employees': total_employees,
+        'today_checkins': today_checkins,
+    })
+    return render(request, 'employees/superadmin_profile.html', context)
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def superadmin_profile_edit(request):
+    """SuperAdmin profile edit view"""
+    user = request.user
+
+    if request.method == 'POST':
+        form = SuperAdminProfileForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('employees:superadmin_profile')
+    else:
+        form = SuperAdminProfileForm(instance=user)
+
+    context = TemplateLayout.init(self={}, context={})
+    context.update({
+        'layout_path': TemplateHelper.set_layout('layout_vertical.html', context),
+        'form': form,
+        'user': user,
+    })
+    return render(request, 'employees/superadmin_profile_edit.html', context)
 @login_required
 @user_passes_test(is_employee)
 def check_in(request):
     """Employee check-in view"""
     employee = request.user.employee_profile
+    today = timezone.now().date()
 
-    # Check if already checked in today
-    if Attendance.has_checked_in_today(employee):
-        messages.warning(request, 'You have already checked in today!')
-        return redirect('employees:employee_dashboard')
+    # Get today's attendance record if it exists
+    today_attendance = Attendance.objects.filter(employee=employee, date=today).first()
 
     if request.method == 'POST':
-        # Create attendance record
-        Attendance.objects.create(employee=employee)
-        messages.success(request, 'Check-in successful!')
+        # Handle photo upload if provided
+        check_in_photo = request.FILES.get('check_in_photo')
+
+        # Get or create attendance record for today (without photo in defaults)
+        attendance, created = Attendance.objects.get_or_create(
+            employee=employee,
+            date=today
+        )
+
+        # Update photo if provided (whether new or existing record)
+        if check_in_photo:
+            attendance.check_in_photo = check_in_photo
+            attendance.save()
+
+        # Compare faces if check-in photo exists and employee has registered face
+        if check_in_photo:
+            if employee.face_registered and employee.face_encoding:
+                try:
+                    from .face_utils import extract_face_encoding, compare_faces
+                    
+                    # Get stored face encoding
+                    stored_encoding = employee.get_face_encoding()
+                    
+                    if stored_encoding is not None:
+                        # Extract face encoding from check-in photo
+                        checkin_encoding = extract_face_encoding(attendance.check_in_photo.path)
+                        
+                        if checkin_encoding is not None:
+                            # Compare faces
+                            result = compare_faces(stored_encoding, checkin_encoding, tolerance=0.6)
+                            
+                            if result['match']:
+                                messages.success(request, f'✓ Check-in successful! Face verified with {result["confidence"]:.1f}% confidence.')
+                            else:
+                                messages.warning(request, f'⚠ Check-in recorded, but face verification failed (similarity: {result["confidence"]:.1f}%). Please ensure you are the registered employee.')
+                        else:
+                            messages.warning(request, '⚠ Check-in successful! No face detected in check-in photo. Please ensure your face is clearly visible.')
+                    else:
+                        messages.warning(request, 'Check-in successful! Face encoding could not be loaded from your profile.')
+                        
+                except ImportError:
+                    messages.info(request, 'ℹ Check-in successful! Face recognition library is not installed, so verification was skipped.')
+                except Exception as e:
+                    messages.warning(request, f'⚠ Check-in successful! Face verification error: {str(e)}')
+            else:
+                messages.info(request, 'ℹ Check-in successful with photo! Face recognition is not set up for your account. Please contact admin to update your profile picture.')
+        else:
+            messages.success(request, '✓ Check-in successful!')
+
         return redirect('employees:employee_dashboard')
 
     context = TemplateLayout.init(self={}, context={})
     context.update({
         'layout_path': TemplateHelper.set_layout('layout_vertical.html', context),
         'employee': employee,
-        'has_checked_in_today': Attendance.has_checked_in_today(employee),
-        'date_today': timezone.now().date(),
+        'has_checked_in_today': bool(today_attendance),
+        'today_attendance': today_attendance,
+        'date_today': today,
         'current_time': timezone.now(),
     })
     return render(request, 'employees/check_in.html', context)

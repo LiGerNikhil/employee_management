@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
+import json
 
 
 class Employee(models.Model):
@@ -47,6 +48,22 @@ class Employee(models.Model):
         null=True,
         help_text="Employee's profile picture"
     )
+    
+    # Face Recognition Data
+    face_encoding = models.TextField(
+        blank=True,
+        null=True,
+        help_text="JSON-encoded face encoding data for recognition"
+    )
+    face_registered = models.BooleanField(
+        default=False,
+        help_text="Whether face recognition data has been registered"
+    )
+    face_registered_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="When face was registered for recognition"
+    )
 
     # User Account (linked to Django's User model)
     user = models.OneToOneField(
@@ -73,6 +90,30 @@ class Employee(models.Model):
         if self.user and not self.user.username:
             self.user.username = self.email
         super().save(*args, **kwargs)
+    
+    def get_face_encoding(self):
+        """Get face encoding as numpy array"""
+        if not self.face_encoding:
+            return None
+        try:
+            import numpy as np
+            encoding_data = json.loads(self.face_encoding)
+            return np.array(encoding_data)
+        except (json.JSONDecodeError, ValueError, ImportError):
+            return None
+    
+    def set_face_encoding(self, encoding_array):
+        """Set face encoding from numpy array"""
+        if encoding_array is not None:
+            self.face_encoding = json.dumps(encoding_array.tolist())
+            self.face_registered = True
+            from django.utils import timezone
+            if not self.face_registered_at:
+                self.face_registered_at = timezone.now()
+        else:
+            self.face_encoding = None
+            self.face_registered = False
+            self.face_registered_at = None
 
 
 class Attendance(models.Model):
@@ -89,8 +130,13 @@ class Attendance(models.Model):
         help_text="Timestamp when employee checked in"
     )
     date = models.DateField(
-        auto_now_add=True,
         help_text="Date of the check-in"
+    )
+    check_in_photo = models.ImageField(
+        upload_to='checkin_photos/',
+        blank=True,
+        null=True,
+        help_text="Photo taken during check-in for verification"
     )
 
     class Meta:

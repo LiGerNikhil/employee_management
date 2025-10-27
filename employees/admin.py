@@ -32,14 +32,19 @@ class EmployeeAdmin(admin.ModelAdmin):
 
 @admin.register(Attendance)
 class AttendanceAdmin(admin.ModelAdmin):
-    list_display = ('employee', 'check_in_time', 'date')
-    list_filter = ('date', 'check_in_time')
+    list_display = ('employee', 'check_in_time', 'get_date')
+    list_filter = ('check_in_time',)
     search_fields = ('employee__name', 'employee__full_name', 'employee__email')
     ordering = ('-check_in_time',)
-    readonly_fields = ('check_in_time', 'date')
+    readonly_fields = ('check_in_time',)
 
     fieldsets = (
         ('Attendance Information', {
-            'fields': ('employee', 'check_in_time', 'date')
+            'fields': ('employee', 'check_in_time', 'check_in_photo')
         }),
     )
+
+    def get_date(self, obj):
+        return obj.date
+    get_date.short_description = 'Date'
+    get_date.admin_order_field = 'date'

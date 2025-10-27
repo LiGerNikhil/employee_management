@@ -3,18 +3,18 @@
 {% load static %}
 {% load i18n %}
 
-{% block title %}Check In | {% get_theme_variables 'template_name' %} - {% get_theme_variables 'template_suffix' %}{% endblock %}
+{% block title %}Check In | Kwikster CRM{% endblock %}
 
 {% block content %}
   <div class="row justify-content-center">
-    <div class="col-xl-6 col-lg-8 col-md-10">
+    <div class="col-xl-8 col-lg-10 col-md-12">
       <div class="card">
         <div class="card-header text-center">
           <h5 class="card-title m-0">Daily Check-in</h5>
-          <small class="text-muted">Mark your attendance for today</small>
+          <small class="text-muted">Photo verification required</small>
         </div>
 
-        <div class="card-body text-center">
+        <div class="card-body">
           {% if messages %}
             {% for message in messages %}
               <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
@@ -25,46 +25,73 @@
           {% endif %}
 
           {% if not has_checked_in_today %}
-            <div class="mb-4">
-              <div class="avatar avatar-xl mb-3 mx-auto">
-                <div class="avatar-initial bg-label-success rounded-circle" style="width: 100px; height: 100px; display: flex; align-items: center; justify-content: center;">
-                  <i class="icon-base bx bx-check-circle icon-48px"></i>
+            <!-- Photo Verification Instructions -->
+            <div class="alert alert-info mb-4">
+              <i class="icon-base bx bx-camera me-1"></i>
+              <strong>Photo Verification Required:</strong> For security and verification purposes, please capture or upload a photo with your check-in. This photo will be stored with your attendance record.
+            </div>
+
+            <!-- Camera Interface -->
+            <div class="text-center mb-4">
+              <div class="camera-container mb-4">
+                <video id="camera" class="camera-preview" autoplay playsinline muted></video>
+                <canvas id="canvas" class="d-none"></canvas>
+                <div class="camera-overlay d-none">
+                  <div class="camera-frame"></div>
                 </div>
               </div>
-              <h4 class="mb-2">Ready to Check In?</h4>
-              <p class="text-muted mb-4">
-                Welcome, {{ employee.name }}! Please confirm your check-in for today.
-              </p>
 
+              <!-- Camera Controls -->
+              <div class="camera-controls mb-4">
+                <button type="button" id="capture-btn" class="btn btn-success btn-lg me-3" disabled>
+                  <i class="icon-base bx bx-camera me-1"></i>Capture Photo
+                </button>
+                <button type="button" id="retake-btn" class="btn btn-outline-secondary btn-lg d-none">
+                  <i class="icon-base bx bx-refresh me-1"></i>Retake
+                </button>
+              </div>
+
+              <!-- Photo Preview -->
+              <div id="photo-preview" class="d-none">
+                <div class="photo-container mb-3">
+                  <img id="captured-photo" class="photo-preview" alt="Captured photo">
+                </div>
+                <p class="text-muted small">Photo will be saved with your check-in record</p>
+              </div>
+
+              <!-- Check-in Information -->
               <div class="row mb-4">
                 <div class="col-md-6">
-                  <div class="border rounded p-3">
+                  <div class="border rounded p-3 text-center">
                     <h6 class="mb-1">Date</h6>
-                    <span class="fw-medium">{{ date_today|date:"l, M d, Y" }}</span>
+                    <span class="fw-medium" id="current-date">{{ date_today|date:"l, M d, Y" }}</span>
                   </div>
                 </div>
                 <div class="col-md-6">
-                  <div class="border rounded p-3">
+                  <div class="border rounded p-3 text-center">
                     <h6 class="mb-1">Time</h6>
-                    <span class="fw-medium">{{ current_time|time:"H:i:s" }}</span>
+                    <span class="fw-medium" id="current-time">{{ current_time|time:"H:i:s" }}</span>
                   </div>
                 </div>
               </div>
 
-              <form method="post">
+              <!-- Hidden form for photo submission -->
+              <form method="post" enctype="multipart/form-data" id="checkin-form">
                 {% csrf_token %}
+                <input type="hidden" name="check_in_photo" id="photo-input" accept="image/*">
                 <div class="d-flex justify-content-center gap-3">
                   <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-outline-secondary">
                     <i class="icon-base bx bx-x me-1"></i>Cancel
                   </a>
-                  <button type="submit" class="btn btn-success btn-lg">
-                    <i class="icon-base bx bx-check-circle me-1"></i>Check In Now
+                  <button type="submit" class="btn btn-success btn-lg" id="submit-btn" disabled>
+                    <i class="icon-base bx bx-check-circle me-1"></i>Check In with Photo
                   </button>
                 </div>
               </form>
             </div>
           {% else %}
-            <div class="mb-4">
+            <!-- Already Checked In -->
+            <div class="text-center mb-4">
               <div class="avatar avatar-xl mb-3 mx-auto">
                 <div class="avatar-initial bg-label-warning rounded-circle" style="width: 100px; height: 100px; display: flex; align-items: center; justify-content: center;">
                   <i class="icon-base bx bx-time-five icon-48px"></i>
@@ -74,6 +101,13 @@
               <p class="text-muted mb-4">
                 You have already checked in today, {{ employee.name }}.
               </p>
+
+              {% if today_attendance and today_attendance.check_in_photo %}
+                <div class="mb-4">
+                  <h6 class="mb-2">Check-in Photo</h6>
+                  <img src="{{ today_attendance.check_in_photo.url }}" class="checkin-photo-preview" alt="Check-in photo" style="max-width: 200px; border-radius: 8px;">
+                </div>
+              {% endif %}
 
               {% if today_attendance %}
                 <div class="alert alert-success">
@@ -108,19 +142,245 @@
 {% block page_js %}
   {{ block.super }}
   <script>
-    // Auto refresh current time
     document.addEventListener('DOMContentLoaded', function() {
-      function updateTime() {
-        const now = new Date();
-        const timeString = now.toLocaleTimeString();
-        const timeElement = document.querySelector('.fw-medium');
-        if (timeElement && timeElement.textContent.includes(':')) {
-          timeElement.textContent = timeString;
+      const camera = document.getElementById('camera');
+      const canvas = document.getElementById('canvas');
+      const captureBtn = document.getElementById('capture-btn');
+      const retakeBtn = document.getElementById('retake-btn');
+      const submitBtn = document.getElementById('submit-btn');
+      const photoInput = document.getElementById('photo-input');
+      const photoPreview = document.getElementById('photo-preview');
+      const capturedPhoto = document.getElementById('captured-photo');
+      const checkinForm = document.getElementById('checkin-form');
+
+      let stream = null;
+      let capturedImageData = null;
+
+      // Initialize camera
+      async function initCamera() {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+              facingMode: 'user'
+            },
+            audio: false
+          });
+
+          camera.srcObject = stream;
+          camera.style.display = 'block';
+          captureBtn.disabled = false;
+          captureBtn.innerHTML = '<i class="icon-base bx bx-camera me-1"></i>Capture Photo';
+
+        } catch (error) {
+          console.error('Camera access denied or not available:', error);
+          captureBtn.innerHTML = '<i class="icon-base bx bx-error me-1"></i>Camera Not Available';
+          captureBtn.disabled = true;
+
+          // Show upload option as fallback
+          showUploadOption();
         }
       }
 
+      // Show upload option as fallback
+      function showUploadOption() {
+        const uploadOption = document.createElement('div');
+        uploadOption.className = 'mt-3';
+        uploadOption.innerHTML = `
+          <div class="alert alert-warning">
+            <i class="icon-base bx bx-camera me-1"></i>
+            <strong>Photo Verification:</strong> Please capture or upload a photo for your check-in record. This helps verify your attendance.
+          </div>
+          <div class="mb-3">
+            <label for="photo-upload" class="form-label">Upload Photo</label>
+            <input type="file" class="form-control" id="photo-upload" accept="image/*" required>
+          </div>
+        `;
+        camera.parentNode.appendChild(uploadOption);
+
+        const photoUpload = document.getElementById('photo-upload');
+        photoUpload.addEventListener('change', function(e) {
+          if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              capturedPhoto.src = e.target.result;
+              photoPreview.classList.remove('d-none');
+              retakeBtn.classList.remove('d-none');
+              submitBtn.disabled = false;
+              capturedImageData = e.target.result;
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+
+      // Capture photo
+      function capturePhoto() {
+        const context = canvas.getContext('2d');
+        canvas.width = camera.videoWidth;
+        canvas.height = camera.videoHeight;
+
+        context.drawImage(camera, 0, 0, canvas.width, canvas.height);
+
+        capturedImageData = canvas.toDataURL('image/jpeg', 0.8);
+        capturedPhoto.src = capturedImageData;
+
+        // Show preview
+        camera.style.display = 'none';
+        photoPreview.classList.remove('d-none');
+        captureBtn.classList.add('d-none');
+        retakeBtn.classList.remove('d-none');
+        submitBtn.disabled = false;
+      }
+
+      // Retake photo
+      function retakePhoto() {
+        camera.style.display = 'block';
+        photoPreview.classList.add('d-none');
+        captureBtn.classList.remove('d-none');
+        retakeBtn.classList.add('d-none');
+        submitBtn.disabled = true;
+        capturedImageData = null;
+      }
+
+      // Submit form with photo data
+      function submitForm() {
+        if (capturedImageData) {
+          // Convert data URL to blob and create file
+          fetch(capturedImageData)
+            .then(res => res.blob())
+            .then(blob => {
+              const file = new File([blob], 'checkin-photo.jpg', { type: 'image/jpeg' });
+              const dt = new DataTransfer();
+              dt.items.add(file);
+              photoInput.files = dt.files;
+            })
+            .then(() => {
+              checkinForm.submit();
+            });
+        } else {
+          // No photo, just submit
+          checkinForm.submit();
+        }
+      }
+
+      // Event listeners
+      captureBtn.addEventListener('click', capturePhoto);
+      retakeBtn.addEventListener('click', retakePhoto);
+      checkinForm.addEventListener('submit', function(e) {
+        // Ensure photo data is set before submission
+        if (capturedImageData) {
+          e.preventDefault();
+          submitForm();
+        }
+        // If no photo data, let form submit normally
+      });
+
+      // Auto refresh current time and date
+      function updateDateTime() {
+        const now = new Date();
+        const dateElement = document.getElementById('current-date');
+        const timeElement = document.getElementById('current-time');
+
+        if (dateElement) {
+          dateElement.textContent = now.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+        }
+
+        if (timeElement) {
+          timeElement.textContent = now.toLocaleTimeString('en-US', {
+            hour12: false
+          });
+        }
+      }
+
+      // Initialize camera on page load
+      initCamera();
+
       // Update time every second
-      setInterval(updateTime, 1000);
+      setInterval(updateDateTime, 1000);
     });
   </script>
+{% endblock %}
+
+{% block vendor_css %}
+  {{ block.super }}
+  <style>
+    .camera-preview {
+      width: 100%;
+      max-width: 500px;
+      height: auto;
+      border-radius: 12px;
+      border: 2px solid #e9ecef;
+      background: #f8f9fa;
+    }
+
+    .camera-container {
+      position: relative;
+      display: inline-block;
+    }
+
+    .camera-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .camera-frame {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 200px;
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    }
+
+    .photo-preview {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 12px;
+      border: 2px solid #e9ecef;
+    }
+
+    .checkin-photo-preview {
+      max-width: 200px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .camera-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    #capture-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 768px) {
+      .camera-controls {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .camera-preview {
+        max-width: 100%;
+      }
+    }
+  </style>
 {% endblock %}

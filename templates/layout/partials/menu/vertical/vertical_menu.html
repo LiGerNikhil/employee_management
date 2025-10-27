@@ -62,8 +62,8 @@
     {% endif %}
 
     <!-- Profile (Available to both) -->
-    <li class="menu-item {% if '/profile/' in request.path %}active{% endif %}">
-      <a href="{% url 'employees:employee_profile' %}" class="menu-link">
+    <li class="menu-item {% if '/profile/' in request.path or '/admin-profile/' in request.path %}active{% endif %}">
+      <a href="{% if user.is_superuser %}{% url 'employees:superadmin_profile' %}{% else %}{% url 'employees:employee_profile' %}{% endif %}" class="menu-link">
         <i class="menu-icon icon-base bx bx-user-circle"></i>
         <div class="text-truncate">My Profile</div>
       </a>

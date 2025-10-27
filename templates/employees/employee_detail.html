@@ -28,8 +28,21 @@
               <div>
                 <h4 class="mb-1">{{ employee.full_name }}</h4>
                 <p class="text-muted mb-2">{{ employee.email }}</p>
-                <div class="d-flex align-items-center">
-                  <span class="badge bg-label-success me-2">Active Employee</span>
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                  {% if employee.user.is_active %}
+                    <span class="badge bg-label-success">Active Employee</span>
+                  {% else %}
+                    <span class="badge bg-label-danger">Inactive Employee</span>
+                  {% endif %}
+                  {% if employee.face_registered %}
+                    <span class="badge bg-label-success">
+                      <i class="icon-base bx bx-face me-1"></i>Face Registered
+                    </span>
+                  {% else %}
+                    <span class="badge bg-label-warning">
+                      <i class="icon-base bx bx-face me-1"></i>Face Not Registered
+                    </span>
+                  {% endif %}
                   <small class="text-muted">Joined {{ employee.created_at|date:"M d, Y" }}</small>
                 </div>
               </div>
@@ -38,6 +51,16 @@
               <a href="{% url 'employees:employee_update' employee.pk %}" class="btn btn-outline-primary">
                 <i class="icon-base bx bx-edit-alt me-1"></i>Edit Employee
               </a>
+              <form method="post" action="{% url 'employees:employee_toggle_status' employee.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn {% if employee.user.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}" onclick="return confirm('Are you sure you want to {% if employee.user.is_active %}deactivate{% else %}activate{% endif %} this employee?{% if employee.user.is_active %} They will not be able to login.{% else %} They will be able to login again.{% endif %}')">
+                  {% if employee.user.is_active %}
+                    <i class="icon-base bx bx-user-x me-1"></i>Deactivate
+                  {% else %}
+                    <i class="icon-base bx bx-user-check me-1"></i>Activate
+                  {% endif %}
+                </button>
+              </form>
               <a href="{% url 'employees:employee_list' %}" class="btn btn-outline-secondary">
                 <i class="icon-base bx bx-arrow-back me-1"></i>Back to List
               </a>
@@ -114,10 +137,48 @@
 
           <div class="row mb-3">
             <div class="col-sm-4">
-              <strong>Member Since:</strong>
+              <strong>Staff Status:</strong>
             </div>
             <div class="col-sm-8">
-              {{ employee.created_at|date:"M d, Y" }} ({{ employee.created_at|timesince }} ago)
+              {% if employee.user.is_staff %}
+                <span class="badge bg-label-success">Staff</span>
+              {% else %}
+                <span class="badge bg-label-secondary">Regular User</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-sm-4">
+              <strong>Face Recognition:</strong>
+            </div>
+            <div class="col-sm-8">
+              {% if employee.face_registered %}
+                <span class="badge bg-label-success mb-2">
+                  <i class="icon-base bx bx-check-circle me-1"></i>Registered
+                </span>
+                {% if employee.face_registered_at %}
+                  <br><small class="text-muted">Registered on: {{ employee.face_registered_at|date:"M d, Y H:i" }}</small>
+                {% endif %}
+              {% else %}
+                <span class="badge bg-label-warning mb-2">
+                  <i class="icon-base bx bx-x-circle me-1"></i>Not Registered
+                </span>
+                <br><small class="text-muted">Update profile picture to register face</small>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-sm-4">
+              <strong>Account Status:</strong>
+            </div>
+            <div class="col-sm-8">
+              {% if employee.user.is_active %}
+                <span class="badge bg-label-success">Active</span>
+              {% else %}
+                <span class="badge bg-label-danger">Inactive</span>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -210,6 +271,7 @@
                     <th>Date</th>
                     <th>Day</th>
                     <th>Check-in Time</th>
+                    <th>Photo</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -224,6 +286,33 @@
                       </td>
                       <td>
                         <span class="fw-medium">{{ attendance.check_in_time|time:"H:i" }}</span>
+                      </td>
+                      <td>
+                        {% if attendance.check_in_photo %}
+                          <img src="{{ attendance.check_in_photo.url }}" alt="Check-in photo" class="attendance-photo-small" data-bs-toggle="modal" data-bs-target="#detailPhotoModal{{ attendance.id }}" style="cursor: pointer;">
+                          <!-- Modal for full-size photo -->
+                          <div class="modal fade" id="detailPhotoModal{{ attendance.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                              <div class="modal-content">
+                                <div class="modal-header">
+                                  <h5 class="modal-title">{{ employee.full_name }} - Check-in Photo</h5>
+                                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body text-center">
+                                  <img src="{{ attendance.check_in_photo.url }}" alt="Check-in photo" class="img-fluid rounded">
+                                  <div class="mt-3">
+                                    <p class="mb-1"><strong>Date:</strong> {{ attendance.date|date:"l, M d, Y" }}</p>
+                                    <p class="mb-0"><strong>Time:</strong> {{ attendance.check_in_time|time:"H:i" }}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        {% else %}
+                          <span class="text-muted">
+                            <i class="icon-base bx bx-camera-off"></i>
+                          </span>
+                        {% endif %}
                       </td>
                       <td>
                         {% if attendance.date|date:"Y-m-d" == today|date:"Y-m-d" %}
@@ -268,13 +357,20 @@
               </a>
             </div>
             <div class="col-md-3 col-sm-6">
-              <a href="{% url 'employees:attendance_list' %}?employee={{ employee.pk }}" class="text-decoration-none">
-                <div class="border rounded p-3 text-center h-100">
-                  <i class="icon-base bx bx-time-five icon-24px text-info mb-2"></i>
-                  <h6 class="mb-1">View Attendance</h6>
-                  <small class="text-muted">See all check-in records</small>
-                </div>
-              </a>
+              <form method="post" action="{% url 'employees:employee_toggle_status' employee.pk %}" class="text-decoration-none">
+                {% csrf_token %}
+                <button type="submit" class="border rounded p-3 text-center h-100 w-100 bg-transparent border-0" onclick="return confirm('Are you sure you want to {% if employee.user.is_active %}deactivate{% else %}activate{% endif %} this employee?{% if employee.user.is_active %} They will not be able to login.{% else %} They will be able to login again.{% endif %}')">
+                  {% if employee.user.is_active %}
+                    <i class="icon-base bx bx-user-x icon-24px text-warning mb-2"></i>
+                    <h6 class="mb-1">Deactivate</h6>
+                    <small class="text-muted">Disable login access</small>
+                  {% else %}
+                    <i class="icon-base bx bx-user-check icon-24px text-success mb-2"></i>
+                    <h6 class="mb-1">Activate</h6>
+                    <small class="text-muted">Enable login access</small>
+                  {% endif %}
+                </button>
+              </form>
             </div>
             <div class="col-md-3 col-sm-6">
               <a href="{% url 'employees:employee_list' %}" class="text-decoration-none">
@@ -300,3 +396,25 @@
     </div>
   </div>
 {% endblock %}
+
+<style>
+  .attendance-photo-small {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 2px solid #e9ecef;
+    transition: transform 0.2s ease;
+  }
+
+  .attendance-photo-small:hover {
+    transform: scale(1.2);
+    border-color: #0d6efd;
+  }
+
+  .modal img {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+  }
+</style>

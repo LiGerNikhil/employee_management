@@ -20,11 +20,16 @@ urlpatterns = [
     path('employees/', views.EmployeeListView.as_view(), name='employee_list'),
     path('employees/create/', views.EmployeeCreateView.as_view(), name='employee_create'),
     path('employees/<int:pk>/', views.employee_detail, name='employee_detail'),
+    path('employees/<int:pk>/toggle-status/', views.employee_toggle_status, name='employee_toggle_status'),
     path('employees/<int:pk>/update/', views.EmployeeUpdateView.as_view(), name='employee_update'),
     path('employees/<int:pk>/delete/', views.EmployeeDeleteView.as_view(), name='employee_delete'),
 
     # Employee Profile URL (Employee only)
     path('profile/', views.employee_profile, name='employee_profile'),
+
+    # SuperAdmin Profile URLs (SuperAdmin only)
+    path('admin-profile/', views.superadmin_profile, name='superadmin_profile'),
+    path('admin-profile/edit/', views.superadmin_profile_edit, name='superadmin_profile_edit'),
 
     # Check-in URLs (Employee only)
     path('check-in/', views.check_in, name='check_in'),

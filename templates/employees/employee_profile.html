@@ -3,7 +3,7 @@
 {% load static %}
 {% load i18n %}
 
-{% block title %}My Profile | {% get_theme_variables 'template_name' %} - {% get_theme_variables 'template_suffix' %}{% endblock %}
+{% block title %}My Profile | Kwikster CRM{% endblock %}
 
 {% block content %}
   <div class="row justify-content-center">
@@ -14,7 +14,7 @@
             <h5 class="card-title m-0">My Profile</h5>
             <small class="text-muted">View and manage your personal information</small>
           </div>
-          <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+          <a href="{% if user.is_superuser %}{% url 'employees:admin_dashboard' %}{% else %}{% url 'employees:employee_dashboard' %}{% endif %}" class="btn btn-outline-secondary btn-sm">
             <i class="icon-base bx bx-arrow-back me-1"></i>Back to Dashboard
           </a>
         </div>
@@ -104,12 +104,14 @@
                 <div class="col-12">
                   <h6 class="text-primary mb-3">Quick Actions</h6>
                   <div class="d-flex gap-3 flex-wrap">
-                    <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-outline-primary btn-sm">
+                    <a href="{% if user.is_superuser %}{% url 'employees:admin_dashboard' %}{% else %}{% url 'employees:employee_dashboard' %}{% endif %}" class="btn btn-outline-primary btn-sm">
                       <i class="icon-base bx bx-home me-1"></i>Dashboard
                     </a>
+                    {% if not user.is_superuser %}
                     <a href="{% url 'employees:check_in' %}" class="btn btn-outline-success btn-sm">
                       <i class="icon-base bx bx-check-circle me-1"></i>Check In
                     </a>
+                    {% endif %}
                     <a href="{% url 'employees:logout' %}" class="btn btn-outline-warning btn-sm">
                       <i class="icon-base bx bx-power-off me-1"></i>Logout
                     </a>
