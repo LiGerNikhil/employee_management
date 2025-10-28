@@ -184,6 +184,34 @@ class Attendance(models.Model):
         null=True,
         help_text="Photo taken during check-out for verification"
     )
+    check_in_latitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=7,
+        blank=True,
+        null=True,
+        help_text="Latitude of check-in location"
+    )
+    check_in_longitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=7,
+        blank=True,
+        null=True,
+        help_text="Longitude of check-in location"
+    )
+    check_out_latitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=7,
+        blank=True,
+        null=True,
+        help_text="Latitude of check-out location"
+    )
+    check_out_longitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=7,
+        blank=True,
+        null=True,
+        help_text="Longitude of check-out location"
+    )
 
     class Meta:
         ordering = ['-check_in_time']

@@ -413,6 +413,8 @@
           <form id="checkout-form" method="post" action="{% url 'employees:check_out' %}" enctype="multipart/form-data" class="d-none">
             {% csrf_token %}
             <input type="file" name="check_out_photo" id="checkout-photo-input" accept="image/*" required class="d-none">
+            <input type="hidden" name="latitude" id="checkout-latitude-input">
+            <input type="hidden" name="longitude" id="checkout-longitude-input">
           </form>
         </div>
         <div class="modal-footer">
@@ -642,14 +644,67 @@ document.addEventListener('DOMContentLoaded', function() {
     const checkoutForm = document.getElementById('checkout-form');
     const checkoutPhotoInput = document.getElementById('checkout-photo-input');
     const checkoutCameraStatus = document.getElementById('checkout-camera-status');
+    const checkoutLatitudeInput = document.getElementById('checkout-latitude-input');
+    const checkoutLongitudeInput = document.getElementById('checkout-longitude-input');
     
     let checkoutStream = null;
     let checkoutPhotoBlob = null;
     
+    // Get user's current location for checkout
+    function getCheckoutLocation() {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error('Geolocation is not supported by your browser'));
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    resolve({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    });
+                },
+                (error) => {
+                    let errorMessage = 'Unable to retrieve your location';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = 'Location access denied. Please enable location services.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = 'Location information is unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage = 'Location request timed out.';
+                            break;
+                    }
+                    reject(new Error(errorMessage));
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        });
+    }
+    
     // Initialize camera when modal is shown
     if (checkoutModal) {
         checkoutModal.addEventListener('shown.bs.modal', function() {
-            initCheckoutCamera();
+            // Get location first
+            getCheckoutLocation()
+                .then(coords => {
+                    checkoutLatitudeInput.value = coords.latitude;
+                    checkoutLongitudeInput.value = coords.longitude;
+                    console.log('Checkout location obtained:', coords);
+                    initCheckoutCamera();
+                })
+                .catch(error => {
+                    console.error('Location error:', error);
+                    checkoutCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>' + error.message;
+                    alert(error.message + '\n\nLocation access is required for check-out.');
+                });
         });
         
         checkoutModal.addEventListener('hidden.bs.modal', function() {

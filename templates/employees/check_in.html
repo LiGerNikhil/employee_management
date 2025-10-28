@@ -79,6 +79,8 @@
               <form method="post" enctype="multipart/form-data" id="checkin-form">
                 {% csrf_token %}
                 <input type="file" name="check_in_photo" id="photo-input" accept="image/*" class="d-none">
+                <input type="hidden" name="latitude" id="latitude-input">
+                <input type="hidden" name="longitude" id="longitude-input">
                 <div class="d-flex justify-content-center gap-3">
                   <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-outline-secondary">
                     <i class="icon-base bx bx-x me-1"></i>Cancel
@@ -206,6 +208,61 @@
       const photoPreview = document.getElementById('photo-preview');
       const capturedPhoto = document.getElementById('captured-photo');
       const checkinForm = document.getElementById('checkin-form');
+      const latitudeInput = document.getElementById('latitude-input');
+      const longitudeInput = document.getElementById('longitude-input');
+
+      // Get user's current location
+      function getUserLocation() {
+        return new Promise((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error('Geolocation is not supported by your browser'));
+            return;
+          }
+
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              });
+            },
+            (error) => {
+              let errorMessage = 'Unable to retrieve your location';
+              switch(error.code) {
+                case error.PERMISSION_DENIED:
+                  errorMessage = 'Location access denied. Please enable location services.';
+                  break;
+                case error.POSITION_UNAVAILABLE:
+                  errorMessage = 'Location information is unavailable.';
+                  break;
+                case error.TIMEOUT:
+                  errorMessage = 'Location request timed out.';
+                  break;
+              }
+              reject(new Error(errorMessage));
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            }
+          );
+        });
+      }
+
+      // Request location on page load (only if form exists)
+      if (latitudeInput && longitudeInput) {
+        getUserLocation()
+          .then(coords => {
+            latitudeInput.value = coords.latitude;
+            longitudeInput.value = coords.longitude;
+            console.log('Location obtained:', coords);
+          })
+          .catch(error => {
+            console.error('Location error:', error);
+            alert(error.message + '\n\nLocation access is required for check-in. Please enable location services in your browser settings and reload the page.');
+          });
+      }
 
       // Checkout elements
       const checkoutCamera = document.getElementById('checkout-camera');

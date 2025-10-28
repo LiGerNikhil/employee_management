@@ -729,6 +729,59 @@ def check_in(request):
     today_attendance = Attendance.objects.filter(employee=employee, date=today).first()
 
     if request.method == 'POST':
+        # Validate geolocation first
+        from employees.geolocation_utils import validate_coordinates, is_within_office_premises
+        
+        user_latitude = request.POST.get('latitude')
+        user_longitude = request.POST.get('longitude')
+        
+        if not user_latitude or not user_longitude:
+            AttendanceLog.objects.create(
+                employee=employee,
+                action='check_in_failed',
+                success=False,
+                failure_reason='location_not_provided',
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                notes='Location coordinates were not provided'
+            )
+            messages.error(request, 'Location access is required for check-in. Please enable location services and try again.')
+            return redirect('employees:check_in')
+        
+        # Validate coordinate format
+        is_valid_coords, coord_message = validate_coordinates(user_latitude, user_longitude)
+        if not is_valid_coords:
+            AttendanceLog.objects.create(
+                employee=employee,
+                action='check_in_failed',
+                success=False,
+                failure_reason='invalid_coordinates',
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                notes=f'Invalid coordinates: {coord_message}'
+            )
+            messages.error(request, f'Invalid location data: {coord_message}')
+            return redirect('employees:check_in')
+        
+        # Check if within office premises
+        is_within, distance, location_message = is_within_office_premises(
+            float(user_latitude), 
+            float(user_longitude)
+        )
+        
+        if not is_within:
+            AttendanceLog.objects.create(
+                employee=employee,
+                action='check_in_failed',
+                success=False,
+                failure_reason='outside_office_premises',
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                notes=f'Location: {user_latitude}, {user_longitude}. {location_message}'
+            )
+            messages.error(request, location_message)
+            return redirect('employees:check_in')
+        
         # Require photo and face match
         check_in_photo = request.FILES.get('check_in_photo')
         if not check_in_photo:
@@ -803,8 +856,10 @@ def check_in(request):
                     'check_in_time': timezone.now(),
                 }
             )
-            # If already exists and has check_in_time, keep it but allow updating photo
+            # If already exists and has check_in_time, keep it but allow updating photo and location
             attendance.check_in_photo = check_in_photo
+            attendance.check_in_latitude = user_latitude
+            attendance.check_in_longitude = user_longitude
             attendance.save()
 
             # Log successful check-in
@@ -1186,6 +1241,62 @@ def check_out(request):
 
     # Only handle POST requests (from the embedded form in check_in.html)
     if request.method == 'POST':
+        # Validate geolocation first
+        from employees.geolocation_utils import validate_coordinates, is_within_office_premises
+        
+        user_latitude = request.POST.get('latitude')
+        user_longitude = request.POST.get('longitude')
+        
+        if not user_latitude or not user_longitude:
+            AttendanceLog.objects.create(
+                employee=employee,
+                action='check_out_failed',
+                success=False,
+                failure_reason='location_not_provided',
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                attendance=attendance,
+                notes='Location coordinates were not provided'
+            )
+            messages.error(request, 'Location access is required for check-out. Please enable location services and try again.')
+            return redirect('employees:check_in')
+        
+        # Validate coordinate format
+        is_valid_coords, coord_message = validate_coordinates(user_latitude, user_longitude)
+        if not is_valid_coords:
+            AttendanceLog.objects.create(
+                employee=employee,
+                action='check_out_failed',
+                success=False,
+                failure_reason='invalid_coordinates',
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                attendance=attendance,
+                notes=f'Invalid coordinates: {coord_message}'
+            )
+            messages.error(request, f'Invalid location data: {coord_message}')
+            return redirect('employees:check_in')
+        
+        # Check if within office premises
+        is_within, distance, location_message = is_within_office_premises(
+            float(user_latitude), 
+            float(user_longitude)
+        )
+        
+        if not is_within:
+            AttendanceLog.objects.create(
+                employee=employee,
+                action='check_out_failed',
+                success=False,
+                failure_reason='outside_office_premises',
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                attendance=attendance,
+                notes=f'Location: {user_latitude}, {user_longitude}. {location_message}'
+            )
+            messages.error(request, location_message)
+            return redirect('employees:check_in')
+        
         # Validation 3: Photo is required
         check_out_photo = request.FILES.get('check_out_photo')
         if not check_out_photo:
@@ -1262,6 +1373,8 @@ def check_out(request):
             # All validations passed - save check-out
             attendance.check_out_photo = check_out_photo
             attendance.check_out_time = timezone.now()
+            attendance.check_out_latitude = user_latitude
+            attendance.check_out_longitude = user_longitude
             attendance.save()
             
             # Log successful check-out
