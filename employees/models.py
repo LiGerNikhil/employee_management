@@ -138,6 +138,17 @@ class Attendance(models.Model):
         null=True,
         help_text="Photo taken during check-in for verification"
     )
+    check_out_time = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Timestamp when employee checked out"
+    )
+    check_out_photo = models.ImageField(
+        upload_to='checkout_photos/',
+        blank=True,
+        null=True,
+        help_text="Photo taken during check-out for verification"
+    )
 
     class Meta:
         ordering = ['-check_in_time']

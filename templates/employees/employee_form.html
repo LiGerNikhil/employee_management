@@ -214,6 +214,9 @@
 
                     <!-- Camera Controls -->
                     <div class="camera-controls mb-3">
+                      <button type="button" id="profile-start-camera-btn" class="btn btn-primary me-2">
+                        <i class="icon-base bx bx-video me-1"></i>Start Camera
+                      </button>
                       <button type="button" id="profile-capture-btn" class="btn btn-success me-2" disabled>
                         <i class="icon-base bx bx-camera me-1"></i>Capture Face
                       </button>
@@ -381,6 +384,7 @@
       {% if not form.instance.pk %}
       const profileCamera = document.getElementById('profile-camera');
       const profileCanvas = document.getElementById('profile-canvas');
+      const profileStartBtn = document.getElementById('profile-start-camera-btn');
       const profileCaptureBtn = document.getElementById('profile-capture-btn');
       const profileRetakeBtn = document.getElementById('profile-retake-btn');
       const profilePhotoInput = document.getElementById('profile-photo-data');
@@ -522,8 +526,13 @@
         profileCaptureBtn.addEventListener('click', captureProfilePhoto);
         profileRetakeBtn.addEventListener('click', retakeProfilePhoto);
 
-        // Initialize camera when page loads
-        initProfileCamera();
+        // Start camera on button click instead of auto-start
+        if (profileStartBtn) {
+          profileStartBtn.addEventListener('click', function() {
+            initProfileCamera();
+            profileStartBtn.disabled = true;
+          });
+        }
 
         // Handle form submission
         formElement.addEventListener('submit', function(e) {
@@ -532,6 +541,13 @@
             submitProfileForm(e);
           }
           // If no photo, let form submit normally
+        });
+
+        // Stop camera when navigating away
+        window.addEventListener('beforeunload', function() {
+          if (profileStream) {
+            profileStream.getTracks().forEach(track => track.stop());
+          }
         });
       }
       {% endif %}

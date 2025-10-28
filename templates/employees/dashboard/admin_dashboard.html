@@ -236,7 +236,7 @@
                   <small class="text-muted">{{ attendance.employee.email }}</small>
                 </div>
                 <div class="text-end">
-                  <small class="text-success fw-medium">{{ attendance.check_in_time|time:"H:i" }}</small>
+                  <small class="text-success fw-medium">{{ attendance.check_in_time|date:"H:i" }}</small>
                 </div>
               </div>
             {% endfor %}

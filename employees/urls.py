@@ -33,6 +33,7 @@ urlpatterns = [
 
     # Check-in URLs (Employee only)
     path('check-in/', views.check_in, name='check_in'),
+    path('check-out/', views.check_out, name='check_out'),
     path('api/check-in-status/', views.check_in_status, name='check_in_status'),
 
     # Attendance URLs (Admin only)

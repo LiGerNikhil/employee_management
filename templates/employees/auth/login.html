@@ -20,12 +20,12 @@
             <div class="app-brand justify-content-center">
               <a href="{% url 'employees:admin_dashboard' %}" class="app-brand-link gap-2">
                 <span class="app-brand-logo demo">{% include 'partials/logo.html' %}</span>
-                <span class="app-brand-text demo text-heading fw-bold">Employee Management</span>
+                
               </a>
             </div>
             <!-- /Logo -->
-            <h4 class="mb-1">Welcome to Employee Management System! 👋</h4>
-            <p class="mb-6">Please sign-in to your account</p>
+        
+            <p class="mb-6 text-center">Please sign-in to your account</p>
 
             {% if messages %}
               {% for message in messages %}

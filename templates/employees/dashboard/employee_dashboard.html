@@ -35,7 +35,7 @@
           </div>
           {% if has_checked_in_today %}
             <h3 class="card-title mb-1 text-success">Checked In</h3>
-            <span class="text-muted">Today at {{ today_attendance.check_in_time|time:"H:i" }}</span>
+            <span class="text-muted">Today at {{ today_attendance.check_in_time|date:"H:i" }}</span>
           {% else %}
             <h3 class="card-title mb-1 text-warning">Not Checked In</h3>
             <span class="text-muted">Please check-in for today</span>
@@ -87,7 +87,7 @@
                     <div class="calendar-day text-center flex-fill p-2 {% if day_data.is_today %}bg-primary text-white rounded{% elif day_data.attendance %}bg-success text-white{% elif day_data.is_past %}text-muted{% endif %}">
                       <div class="day-number">{{ day_data.day }}</div>
                       {% if day_data.attendance %}
-                        <small class="check-in-time">{{ day_data.attendance.check_in_time|time:"H:i" }}</small>
+                        <small class="check-in-time">{{ day_data.attendance.check_in_time|date:"H:i" }}</small>
                       {% endif %}
                     </div>
                   {% else %}
@@ -136,9 +136,9 @@
                   </div>
                 </div>
                 <div class="flex-grow-1">
-                  <span class="fw-medium">{{ attendance.date|date:"l, M d, Y" }}</span>
+                  <span class="fw-medium">{{ attendance.date|date:"d M Y, l" }}</span>
                 </div>
-                <small class="text-success">{{ attendance.check_in_time|time:"H:i" }}</small>
+                <small class="text-success">{{ attendance.check_in_time|date:"H:i" }}</small>
               </div>
             {% endfor %}
           {% else %}

@@ -608,3 +608,46 @@ def check_in_status(request):
         'has_checked_in': has_checked_in,
         'message': 'Already checked in today' if has_checked_in else 'Not checked in today'
     })
+
+
+@login_required
+@user_passes_test(is_employee)
+def check_out(request):
+    """Employee check-out view for setting today's checkout time and optional photo"""
+    employee = request.user.employee_profile
+    today = timezone.now().date()
+
+    attendance = Attendance.objects.filter(employee=employee, date=today).first()
+
+    if not attendance:
+        messages.error(request, 'You have not checked in today. Please check in first before checking out.')
+        return redirect('employees:check_in')
+
+    if attendance.check_out_time:
+        messages.info(request, 'You have already checked out today.')
+        return redirect('employees:employee_dashboard')
+
+    if request.method == 'POST':
+        # Optional checkout photo
+        check_out_photo = request.FILES.get('check_out_photo')
+
+        if check_out_photo:
+            attendance.check_out_photo = check_out_photo
+
+        attendance.check_out_time = timezone.now()
+        attendance.save()
+
+        messages.success(request, '✓ Check-out recorded successfully!')
+        return redirect('employees:employee_dashboard')
+
+    # Fallback GET renders the same check-in page with current context
+    context = TemplateLayout.init(self={}, context={})
+    context.update({
+        'layout_path': TemplateHelper.set_layout('layout_vertical.html', context),
+        'employee': employee,
+        'has_checked_in_today': True,
+        'today_attendance': attendance,
+        'date_today': today,
+        'current_time': timezone.now(),
+    })
+    return render(request, 'employees/check_in.html', context)
