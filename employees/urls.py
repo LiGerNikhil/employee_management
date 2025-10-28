@@ -36,6 +36,20 @@ urlpatterns = [
     path('check-out/', views.check_out, name='check_out'),
     path('api/check-in-status/', views.check_in_status, name='check_in_status'),
 
-    # Attendance URLs (Admin only)
-    path('attendance/', views.AttendanceListView.as_view(), name='attendance_list'),
+    # Attendance URLs
+    path('attendance/', views.AttendanceListView.as_view(), name='attendance_list'),  # Admin only
+    path('my-attendance/', views.my_attendance_logs, name='my_attendance_logs'),  # Employee only
+    path('attendance-logs/', views.admin_attendance_logs, name='admin_attendance_logs'),  # Admin only - All activity logs
+
+    # Face Recognition URLs
+    path('face/register/', views.face_registration, name='face_register'),
+    path('face/attendance/', views.mark_attendance, name='face_attendance'),
+    
+    # Ticket System URLs
+    path('tickets/', views.employee_tickets, name='employee_tickets'),  # Employee - My tickets
+    path('tickets/create/', views.create_ticket, name='create_ticket'),  # Employee - Create ticket
+    path('tickets/<int:pk>/', views.ticket_detail, name='ticket_detail'),  # Employee - View ticket
+    path('tickets/<int:pk>/comment/', views.add_ticket_comment, name='add_ticket_comment'),  # Add comment
+    path('tickets/manage/', views.admin_tickets, name='admin_tickets'),  # Admin - All tickets
+    path('tickets/manage/<int:pk>/update/', views.admin_update_ticket, name='admin_update_ticket'),  # Admin - Update ticket
 ]

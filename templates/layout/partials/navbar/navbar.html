@@ -10,22 +10,8 @@
     </a>
   </div>
   {% endif %}
-  <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
-
-    <!-- Search -->
-    <div class="navbar-nav align-items-center">
-      <div class="nav-item d-flex align-items-center">
-        <i class="icon-base bx bx-search icon-22px"></i>
-        <input type="text" class="form-control border-0 shadow-none ps-1 ps-sm-2" placeholder="Search..." aria-label="Search...">
-      </div>
-    </div>
-    <!-- /Search -->
-
-    <ul class="navbar-nav flex-row align-items-center ms-auto">
-      <!-- Place this tag where you want the button to render. -->
-      <li class="nav-item lh-1 me-4">
-        <a class="github-button" href="https://github.com/" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star Employee Management System on GitHub">Star</a>
-      </li>
+  <div class="navbar-nav-right d-flex align-items-center justify-content-end w-100" id="navbar-collapse">
+    <ul class="navbar-nav flex-row align-items-center">
 
       <!-- User -->
       <li class="nav-item navbar-dropdown dropdown-user dropdown">
@@ -42,7 +28,7 @@
         </a>
         <ul class="dropdown-menu dropdown-menu-end">
           <li>
-            <a class="dropdown-item" href="{% url 'employees:employee_profile' %}">
+            <a class="dropdown-item" href="{% if user.is_superuser %}{% url 'employees:superadmin_profile' %}{% else %}{% url 'employees:employee_profile' %}{% endif %}">
               <div class="d-flex">
                 <div class="flex-shrink-0 me-3">
                   <div class="avatar avatar-online">

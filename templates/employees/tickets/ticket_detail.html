@@ -1,0 +1,277 @@
+{% extends layout_path %}
+
+{% load static %}
+
+{% block title %}Ticket {{ ticket.ticket_number }} | Employee Portal{% endblock %}
+
+{% block content %}
+  <div class="row">
+    <!-- Back Button -->
+    <div class="col-12 mb-4">
+      <a href="{% url 'employees:employee_tickets' %}" class="btn btn-outline-secondary">
+        <i class="bx bx-arrow-back me-1"></i>Back to Tickets
+      </a>
+    </div>
+
+    <!-- Ticket Information -->
+    <div class="col-lg-8 col-12 mb-6">
+      <!-- Ticket Header -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <h4 class="card-title mb-2">
+                <i class="bx {{ ticket.category_icon }} me-2"></i>{{ ticket.subject }}
+              </h4>
+              <div class="d-flex gap-2 flex-wrap">
+                <span class="badge bg-{{ ticket.status_color }}">
+                  <i class="bx bx-circle me-1"></i>{{ ticket.get_status_display }}
+                </span>
+                <span class="badge bg-{{ ticket.priority_color }}">
+                  {{ ticket.get_priority_display }} Priority
+                </span>
+                <span class="badge bg-label-info">
+                  {{ ticket.get_category_display }}
+                </span>
+                {% if ticket.is_overdue %}
+                  <span class="badge bg-danger">
+                    <i class="bx bx-error me-1"></i>Overdue
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+            <h5 class="text-primary mb-0">{{ ticket.ticket_number }}</h5>
+          </div>
+
+          <div class="row text-muted small mb-3">
+            <div class="col-md-6">
+              <i class="bx bx-calendar me-1"></i>
+              <strong>Created:</strong> {{ ticket.created_at|date:"d M Y, H:i" }}
+            </div>
+            <div class="col-md-6">
+              <i class="bx bx-time me-1"></i>
+              <strong>Last Updated:</strong> {{ ticket.updated_at|date:"d M Y, H:i" }}
+            </div>
+          </div>
+
+          {% if ticket.resolved_at %}
+            <div class="alert alert-success mb-3">
+              <i class="bx bx-check-circle me-1"></i>
+              <strong>Resolved on {{ ticket.resolved_at|date:"d M Y, H:i" }}</strong>
+              {% if ticket.resolved_by %}
+                by {{ ticket.resolved_by.get_full_name|default:ticket.resolved_by.username }}
+              {% endif %}
+            </div>
+          {% endif %}
+          
+          {% if ticket.updated_at|date:"Y-m-d H:i" != ticket.created_at|date:"Y-m-d H:i" %}
+            <div class="alert alert-info mb-0">
+              <i class="bx bx-info-circle me-1"></i>
+              <strong>Last Updated:</strong> {{ ticket.updated_at|date:"d M Y, H:i" }}
+              <span class="ms-2 badge bg-primary">New Activity</span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title m-0">
+            <i class="bx bx-detail me-2"></i>Description
+          </h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-0" style="white-space: pre-wrap;">{{ ticket.description }}</p>
+        </div>
+      </div>
+
+      <!-- Attachment -->
+      {% if ticket.attachment %}
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title m-0">
+              <i class="bx bx-paperclip me-2"></i>Attachment
+            </h5>
+          </div>
+          <div class="card-body">
+            <a href="{{ ticket.attachment.url }}" target="_blank" class="btn btn-outline-primary">
+              <i class="bx bx-download me-1"></i>Download Attachment
+            </a>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Comments Section -->
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title m-0">
+            <i class="bx bx-conversation me-2"></i>Comments & Updates
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if comments %}
+            <div class="timeline">
+              {% for comment in comments %}
+                <div class="timeline-item mb-4">
+                  <div class="d-flex">
+                    <div class="avatar avatar-sm me-3">
+                      <div class="avatar-initial {% if comment.is_admin %}bg-danger{% else %}bg-primary{% endif %} rounded-circle">
+                        {% if comment.is_admin %}
+                          <i class="bx bx-shield"></i>
+                        {% else %}
+                          <i class="bx bx-user"></i>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="flex-grow-1">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <h6 class="mb-0">
+                          {% if comment.is_admin %}
+                            <span class="badge bg-danger me-1">Admin</span>
+                          {% endif %}
+                          {{ comment.user.get_full_name|default:comment.user.username }}
+                        </h6>
+                        <small class="text-muted">{{ comment.created_at|date:"d M Y, H:i" }}</small>
+                      </div>
+                      <div class="card">
+                        <div class="card-body">
+                          <p class="mb-0" style="white-space: pre-wrap;">{{ comment.comment }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted text-center mb-0">No comments yet. Add your first comment below.</p>
+          {% endif %}
+
+          <!-- Add Comment Form -->
+          {% if ticket.status != 'closed' %}
+            <div class="mt-4">
+              <h6 class="mb-3">Add a Comment</h6>
+              <form method="post" action="{% url 'employees:add_ticket_comment' ticket.pk %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <textarea class="form-control" 
+                            name="comment" 
+                            rows="4" 
+                            placeholder="Type your comment or question here..."
+                            required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                  <i class="bx bx-send me-1"></i>Post Comment
+                </button>
+              </form>
+            </div>
+          {% else %}
+            <div class="alert alert-secondary mt-4">
+              <i class="bx bx-info-circle me-1"></i>
+              This ticket is closed. Comments are disabled.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4 col-12">
+      <!-- Status Card -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h6 class="card-title m-0">Ticket Status</h6>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label small text-muted">Current Status</label>
+            <div>
+              <span class="badge bg-{{ ticket.status_color }} fs-6">
+                {{ ticket.get_status_display }}
+              </span>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small text-muted">Priority</label>
+            <div>
+              <span class="badge bg-{{ ticket.priority_color }} fs-6">
+                {{ ticket.get_priority_display }}
+              </span>
+            </div>
+          </div>
+          <div>
+            <label class="form-label small text-muted">Category</label>
+            <div>
+              <span class="badge bg-label-info fs-6">
+                <i class="bx {{ ticket.category_icon }} me-1"></i>
+                {{ ticket.get_category_display }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline Card -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h6 class="card-title m-0">Timeline</h6>
+        </div>
+        <div class="card-body">
+          <ul class="timeline timeline-sm">
+            <li class="timeline-item">
+              <span class="timeline-indicator timeline-indicator-primary">
+                <i class="bx bx-plus"></i>
+              </span>
+              <div class="timeline-event">
+                <div class="timeline-header mb-1">
+                  <h6 class="mb-0">Ticket Created</h6>
+                  <small class="text-muted">{{ ticket.created_at|date:"d M Y, H:i" }}</small>
+                </div>
+              </div>
+            </li>
+            
+            {% if ticket.status == 'in_progress' %}
+              <li class="timeline-item">
+                <span class="timeline-indicator timeline-indicator-warning">
+                  <i class="bx bx-loader-circle"></i>
+                </span>
+                <div class="timeline-event">
+                  <div class="timeline-header mb-1">
+                    <h6 class="mb-0">In Progress</h6>
+                    <small class="text-muted">Being worked on</small>
+                  </div>
+                </div>
+              </li>
+            {% endif %}
+            
+            {% if ticket.resolved_at %}
+              <li class="timeline-item">
+                <span class="timeline-indicator timeline-indicator-success">
+                  <i class="bx bx-check"></i>
+                </span>
+                <div class="timeline-event">
+                  <div class="timeline-header mb-1">
+                    <h6 class="mb-0">Resolved</h6>
+                    <small class="text-muted">{{ ticket.resolved_at|date:"d M Y, H:i" }}</small>
+                  </div>
+                </div>
+              </li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+
+      <!-- Help Card -->
+      <div class="card bg-light">
+        <div class="card-body">
+          <h6 class="card-title">
+            <i class="bx bx-help-circle me-1"></i>Need Help?
+          </h6>
+          <p class="small mb-2">Our support team typically responds within 24 hours.</p>
+          <p class="small mb-0">For urgent issues, please mark the priority as "Urgent".</p>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -43,10 +43,24 @@
         </a>
       </li>
 
-      <li class="menu-item {% if '/attendance/' in request.path %}active{% endif %}">
+      <li class="menu-item {% if '/attendance/' in request.path and '/attendance-logs/' not in request.path %}active{% endif %}">
         <a href="{% url 'employees:attendance_list' %}" class="menu-link">
           <i class="menu-icon icon-base bx bx-time-five"></i>
           <div class="text-truncate">Attendance</div>
+        </a>
+      </li>
+
+      <li class="menu-item {% if '/attendance-logs/' in request.path %}active{% endif %}">
+        <a href="{% url 'employees:admin_attendance_logs' %}" class="menu-link">
+          <i class="menu-icon icon-base bx bx-list-ul"></i>
+          <div class="text-truncate">Activity Logs</div>
+        </a>
+      </li>
+
+      <li class="menu-item {% if '/tickets/manage/' in request.path %}active{% endif %}">
+        <a href="{% url 'employees:admin_tickets' %}" class="menu-link">
+          <i class="menu-icon icon-base bx bx-support"></i>
+          <div class="text-truncate">Support Tickets</div>
         </a>
       </li>
 
@@ -54,8 +68,22 @@
       <!-- Employee Only Navigation -->
       <li class="menu-item {% if '/check-in/' in request.path %}active{% endif %}">
         <a href="{% url 'employees:check_in' %}" class="menu-link">
-          <i class="menu-icon icon-base bx bx-check-circle"></i>
-          <div class="text-truncate">Check In</div>
+          <i class="menu-icon icon-base bx bx-log-in-circle"></i>
+          <div class="text-truncate">Check In / Out</div>
+        </a>
+      </li>
+
+      <li class="menu-item {% if '/my-attendance/' in request.path %}active{% endif %}">
+        <a href="{% url 'employees:my_attendance_logs' %}" class="menu-link">
+          <i class="menu-icon icon-base bx bx-history"></i>
+          <div class="text-truncate">My Attendance Logs</div>
+        </a>
+      </li>
+
+      <li class="menu-item {% if '/tickets/' in request.path and '/tickets/manage/' not in request.path %}active{% endif %}">
+        <a href="{% url 'employees:employee_tickets' %}" class="menu-link">
+          <i class="menu-icon icon-base bx bx-support"></i>
+          <div class="text-truncate">Support Tickets</div>
         </a>
       </li>
 

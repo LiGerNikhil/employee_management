@@ -5,6 +5,8 @@ import face_recognition
 import numpy as np
 from PIL import Image
 import io
+from django.conf import settings
+from .models import Employee
 
 
 def extract_face_encoding(image_path):
@@ -113,6 +115,45 @@ def compare_faces(known_encoding, unknown_encoding, tolerance=0.6):
         }
 
 
+def get_match_tolerance(default=0.6):
+    """Read face match tolerance from settings if provided"""
+    return getattr(settings, 'FACE_MATCH_TOLERANCE', default)
+
+
+def is_encoding_unique(new_encoding, exclude_employee_id=None, tolerance=None):
+    """
+    Check that a face encoding is unique across all employees.
+
+    Args:
+        new_encoding: numpy array for new face
+        exclude_employee_id: optional employee id to exclude from comparison
+        tolerance: optional override tolerance
+
+    Returns:
+        (is_unique: bool, conflict_employee: Employee | None, distance: float | None)
+    """
+    if new_encoding is None:
+        return True, None, None
+
+    tol = tolerance if tolerance is not None else get_match_tolerance()
+
+    qs = Employee.objects.exclude(face_encoding__isnull=True)
+    if exclude_employee_id:
+        qs = qs.exclude(pk=exclude_employee_id)
+
+    for emp in qs:
+        known = emp.get_face_encoding()
+        if known is None:
+            continue
+        # Use face_distance to compute similarity
+        distance = float(face_recognition.face_distance([known], new_encoding)[0])
+        match = bool(face_recognition.compare_faces([known], new_encoding, tolerance=tol)[0])
+        if match:
+            return False, emp, distance
+
+    return True, None, None
+
+
 def validate_face_image(image_path):
     """
     Validate that an image contains exactly one detectable face
@@ -188,10 +229,18 @@ def process_and_store_face_encoding(employee, image_path):
                 'message': 'Failed to extract face encoding from the image.'
             }
         
+        # Ensure uniqueness across all employees
+        is_unique, conflict_emp, distance = is_encoding_unique(encoding, exclude_employee_id=employee.pk)
+        if not is_unique:
+            return {
+                'success': False,
+                'message': f'This face appears to match an existing employee ("{conflict_emp.full_name}"). Please use a unique face image.'
+            }
+
         # Store the encoding
         employee.set_face_encoding(encoding)
         employee.save()
-        
+
         return {
             'success': True,
             'message': 'Face registered successfully!'

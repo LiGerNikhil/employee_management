@@ -1,0 +1,238 @@
+{% extends layout_path %}
+
+{% load static %}
+
+{% block title %}My Support Tickets | Employee Portal{% endblock %}
+
+{% block content %}
+  <div class="row">
+    <!-- Page Header -->
+    <div class="col-12 mb-6">
+      <div class="card bg-gradient-primary text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h4 class="card-title text-white mb-1">
+                <i class="bx bx-support me-2"></i>My Support Tickets
+              </h4>
+              <p class="mb-0 opacity-75">Track and manage your support requests</p>
+            </div>
+            <div>
+              <a href="{% url 'employees:create_ticket' %}" class="btn btn-light">
+                <i class="bx bx-plus me-1"></i>Create New Ticket
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="col-xl-3 col-md-6 col-12 mb-6">
+      <div class="card">
+        <div class="card-body text-center">
+          <div class="avatar mx-auto mb-3" style="width: 50px; height: 50px;">
+            <div class="avatar-initial bg-label-primary rounded">
+              <i class="bx bx-list-ul icon-20px"></i>
+            </div>
+          </div>
+          <h4 class="mb-1">{{ total_tickets }}</h4>
+          <small class="text-muted">Total Tickets</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 col-12 mb-6">
+      <div class="card">
+        <div class="card-body text-center">
+          <div class="avatar mx-auto mb-3" style="width: 50px; height: 50px;">
+            <div class="avatar-initial bg-label-primary rounded">
+              <i class="bx bx-time icon-20px"></i>
+            </div>
+          </div>
+          <h4 class="mb-1">{{ open_tickets }}</h4>
+          <small class="text-muted">Open</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 col-12 mb-6">
+      <div class="card">
+        <div class="card-body text-center">
+          <div class="avatar mx-auto mb-3" style="width: 50px; height: 50px;">
+            <div class="avatar-initial bg-label-warning rounded">
+              <i class="bx bx-loader-circle icon-20px"></i>
+            </div>
+          </div>
+          <h4 class="mb-1">{{ in_progress_tickets }}</h4>
+          <small class="text-muted">In Progress</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 col-12 mb-6">
+      <div class="card">
+        <div class="card-body text-center">
+          <div class="avatar mx-auto mb-3" style="width: 50px; height: 50px;">
+            <div class="avatar-initial bg-label-success rounded">
+              <i class="bx bx-check-circle icon-20px"></i>
+            </div>
+          </div>
+          <h4 class="mb-1">{{ resolved_tickets }}</h4>
+          <small class="text-muted">Resolved</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters and Tickets -->
+    <div class="col-12 mb-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title m-0">My Tickets</h5>
+          
+          <!-- Filter Form -->
+          <form method="get" class="d-flex gap-2">
+            <select name="status" class="form-select form-select-sm" style="width: auto;">
+              <option value="">All Status</option>
+              {% for status_code, status_label in status_choices %}
+                <option value="{{ status_code }}" {% if selected_status == status_code %}selected{% endif %}>
+                  {{ status_label }}
+                </option>
+              {% endfor %}
+            </select>
+            
+            <select name="priority" class="form-select form-select-sm" style="width: auto;">
+              <option value="">All Priority</option>
+              {% for priority_code, priority_label in priority_choices %}
+                <option value="{{ priority_code }}" {% if selected_priority == priority_code %}selected{% endif %}>
+                  {{ priority_label }}
+                </option>
+              {% endfor %}
+            </select>
+            
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="bx bx-filter-alt"></i> Filter
+            </button>
+            
+            {% if selected_status or selected_priority %}
+              <a href="{% url 'employees:employee_tickets' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bx bx-reset"></i> Reset
+              </a>
+            {% endif %}
+          </form>
+        </div>
+
+        <div class="card-body">
+          {% if tickets %}
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead class="table-light">
+                  <tr>
+                    <th>Ticket #</th>
+                    <th>Subject</th>
+                    <th>Category</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for ticket in tickets %}
+                    <tr>
+                      <td>
+                        <strong class="text-primary">{{ ticket.ticket_number }}</strong>
+                        {% if ticket.updated_at|date:"Y-m-d H:i" != ticket.created_at|date:"Y-m-d H:i" %}
+                          <span class="badge bg-info ms-1" title="Ticket has been updated">
+                            <i class="bx bx-bell"></i> Updated
+                          </span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <div class="d-flex align-items-center">
+                          <i class="bx {{ ticket.category_icon }} me-2 text-muted"></i>
+                          <span>{{ ticket.subject }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge bg-label-info">{{ ticket.get_category_display }}</span>
+                      </td>
+                      <td>
+                        <span class="badge bg-{{ ticket.priority_color }}">
+                          {{ ticket.get_priority_display }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge bg-{{ ticket.status_color }}">
+                          <i class="bx bx-circle me-1"></i>{{ ticket.get_status_display }}
+                        </span>
+                      </td>
+                      <td>
+                        <small>{{ ticket.created_at|date:"d M Y, H:i" }}</small>
+                      </td>
+                      <td>
+                        <a href="{% url 'employees:ticket_detail' ticket.pk %}" class="btn btn-sm btn-outline-primary">
+                          <i class="bx bx-show"></i> View
+                        </a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+              <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                  {% if page_obj.has_previous %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}">
+                        <i class="bx bx-chevron-left"></i>
+                      </a>
+                    </li>
+                  {% endif %}
+
+                  <li class="page-item active">
+                    <span class="page-link">
+                      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                  </li>
+
+                  {% if page_obj.has_next %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}">
+                        <i class="bx bx-chevron-right"></i>
+                      </a>
+                    </li>
+                  {% endif %}
+                </ul>
+              </nav>
+            {% endif %}
+
+          {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+              <div class="avatar avatar-xl mx-auto mb-3">
+                <div class="avatar-initial bg-label-primary rounded">
+                  <i class="bx bx-support display-4"></i>
+                </div>
+              </div>
+              <h5 class="mb-2">No Tickets Found</h5>
+              <p class="text-muted mb-4">
+                {% if selected_status or selected_priority %}
+                  No tickets match your filter criteria.
+                {% else %}
+                  You haven't created any support tickets yet.
+                {% endif %}
+              </p>
+              <a href="{% url 'employees:create_ticket' %}" class="btn btn-primary">
+                <i class="bx bx-plus me-1"></i>Create Your First Ticket
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

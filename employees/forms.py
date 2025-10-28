@@ -30,6 +30,8 @@ class EmployeeForm(forms.ModelForm):
         fields = [
             'name', 'full_name', 'email', 'contact',
             'aadhar_card_number', 'account_number', 'ifsc_code', 'pan_card',
+            'current_address', 'permanent_address',
+            'relative_name', 'relative_contact', 'relation_with_employee',
             'profile_picture', 'password'
         ]
         widgets = {
@@ -78,6 +80,11 @@ class EmployeeForm(forms.ModelForm):
             'account_number': 'Bank account number (9-18 digits)',
             'ifsc_code': '11-character IFSC code',
             'pan_card': '10-character PAN card number (e.g., ABCDE1234F)',
+            'current_address': 'Current residential address',
+            'permanent_address': 'Permanent residential address',
+            'relative_name': 'Name of a relative for emergency contact',
+            'relative_contact': 'Contact number of the relative',
+            'relation_with_employee': 'Relationship with the employee',
             'profile_picture': 'Upload profile picture (optional)',
         }
 
@@ -164,6 +171,8 @@ class EmployeeUpdateForm(forms.ModelForm):
         fields = [
             'name', 'full_name', 'email', 'contact',
             'aadhar_card_number', 'account_number', 'ifsc_code', 'pan_card',
+            'current_address', 'permanent_address',
+            'relative_name', 'relative_contact', 'relation_with_employee',
             'profile_picture'
         ]
         widgets = {
@@ -212,6 +221,11 @@ class EmployeeUpdateForm(forms.ModelForm):
             'account_number': 'Bank account number (9-18 digits)',
             'ifsc_code': '11-character IFSC code',
             'pan_card': '10-character PAN card number (e.g., ABCDE1234F)',
+            'current_address': 'Current residential address',
+            'permanent_address': 'Permanent residential address',
+            'relative_name': 'Name of a relative for emergency contact',
+            'relative_contact': 'Contact number of the relative',
+            'relation_with_employee': 'Relationship with the employee',
             'profile_picture': 'Upload new profile picture (optional)',
         }
 

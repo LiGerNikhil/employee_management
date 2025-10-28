@@ -78,7 +78,7 @@
               <!-- Hidden form for photo submission -->
               <form method="post" enctype="multipart/form-data" id="checkin-form">
                 {% csrf_token %}
-                <input type="hidden" name="check_in_photo" id="photo-input" accept="image/*">
+                <input type="file" name="check_in_photo" id="photo-input" accept="image/*" class="d-none">
                 <div class="d-flex justify-content-center gap-3">
                   <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-outline-secondary">
                     <i class="icon-base bx bx-x me-1"></i>Cancel
@@ -93,9 +93,7 @@
             <!-- Already Checked In -->
             <div class="text-center mb-4">
               <div class="avatar avatar-xl mb-3 mx-auto">
-                <div class="avatar-initial bg-label-warning rounded-circle" style="width: 100px; height: 100px; display: flex; align-items: center; justify-content: center;">
-                  <i class="icon-base bx bx-time-five icon-48px"></i>
-                </div>
+              
               </div>
               <h4 class="mb-2">Already Checked In</h4>
               <p class="text-muted mb-4">
@@ -125,17 +123,55 @@
                       <strong>Check-out Time:</strong> {{ today_attendance.check_out_time|date:"H:i:s" }}
                     </p>
                   {% else %}
-                    <div class="mt-3">
-                      <form method="post" action="{% url 'employees:check_out' %}" enctype="multipart/form-data" class="d-inline-block">
-                        {% csrf_token %}
-                        <div class="mb-2">
-                          <label class="form-label">Optional check-out photo</label>
-                          <input type="file" name="check_out_photo" accept="image/*" class="form-control" />
+                    <div class="checkout-section mt-4">
+                      <div class="alert alert-warning border-warning">
+                        <h6 class="alert-heading mb-2">
+                          <i class="icon-base bx bx-log-out-circle me-1"></i> Ready to Check Out?
+                        </h6>
+                        <p class="mb-0 small">Complete your day by checking out with face verification below.</p>
+                      </div>
+
+                      <div class="camera-section checkout-camera-section">
+                        <div class="text-center mb-3">
+                          <div class="camera-container mb-3">
+                            <video id="checkout-camera" class="camera-preview" autoplay playsinline muted style="display: none;"></video>
+                            <canvas id="checkout-canvas" class="d-none"></canvas>
+                          </div>
+
+                          <div class="camera-controls mb-3">
+                            <button type="button" id="checkout-start-btn" class="btn btn-primary btn-lg">
+                              <i class="icon-base bx bx-video me-1"></i>Start Camera for Check-out
+                            </button>
+                            <button type="button" id="checkout-capture-btn" class="btn btn-success btn-lg d-none" disabled>
+                              <i class="icon-base bx bx-camera me-1"></i>Capture Photo
+                            </button>
+                            <button type="button" id="checkout-retake-btn" class="btn btn-outline-secondary btn-lg d-none">
+                              <i class="icon-base bx bx-refresh me-1"></i>Retake
+                            </button>
+                          </div>
+
+                          <div id="checkout-preview" class="d-none mb-3">
+                            <div class="photo-container mb-2">
+                              <img id="checkout-captured-photo" class="photo-preview" alt="Checkout photo">
+                            </div>
+                            <div id="checkout-status" class="text-success fw-medium">
+                              <i class="bx bx-check-circle"></i> Photo captured successfully! Click below to check out.
+                            </div>
+                          </div>
+
+                          <div id="checkout-fallback-container" class="d-none"></div>
+
+                          <form id="checkout-form" method="post" action="{% url 'employees:check_out' %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <input type="file" name="check_out_photo" id="checkout-photo-input" accept="image/*" class="d-none">
+                            <div class="d-flex justify-content-center gap-3">
+                              <button type="submit" class="btn btn-danger btn-lg" id="checkout-submit-btn" disabled>
+                                <i class="icon-base bx bx-log-out me-1"></i> Complete Check-out
+                              </button>
+                            </div>
+                          </form>
                         </div>
-                        <button type="submit" class="btn btn-danger">
-                          <i class="icon-base bx bx-log-out me-1"></i> Check-out Now
-                        </button>
-                      </form>
+                      </div>
                     </div>
                   {% endif %}
                 </div>
@@ -171,8 +207,24 @@
       const capturedPhoto = document.getElementById('captured-photo');
       const checkinForm = document.getElementById('checkin-form');
 
+      // Checkout elements
+      const checkoutCamera = document.getElementById('checkout-camera');
+      const checkoutCanvas = document.getElementById('checkout-canvas');
+      const checkoutStartBtn = document.getElementById('checkout-start-btn');
+      const checkoutCaptureBtn = document.getElementById('checkout-capture-btn');
+      const checkoutRetakeBtn = document.getElementById('checkout-retake-btn');
+      const checkoutPreview = document.getElementById('checkout-preview');
+      const checkoutCapturedPhoto = document.getElementById('checkout-captured-photo');
+      const checkoutStatus = document.getElementById('checkout-status');
+      const checkoutForm = document.getElementById('checkout-form');
+      const checkoutPhotoInput = document.getElementById('checkout-photo-input');
+      const checkoutSubmitBtn = document.getElementById('checkout-submit-btn');
+      const checkoutFallbackContainer = document.getElementById('checkout-fallback-container');
+
       let stream = null;
       let capturedImageData = null;
+      let checkoutStream = null;
+      let checkoutImageData = null;
 
       // Initialize camera
       async function initCamera() {
@@ -284,17 +336,25 @@
         }
       }
 
-      // Event listeners
-      captureBtn.addEventListener('click', capturePhoto);
-      retakeBtn.addEventListener('click', retakePhoto);
-      checkinForm.addEventListener('submit', function(e) {
-        // Ensure photo data is set before submission
-        if (capturedImageData) {
-          e.preventDefault();
-          submitForm();
-        }
-        // If no photo data, let form submit normally
-      });
+      // Event listeners for check-in (only if elements exist)
+      if (captureBtn) {
+        captureBtn.addEventListener('click', capturePhoto);
+      }
+      
+      if (retakeBtn) {
+        retakeBtn.addEventListener('click', retakePhoto);
+      }
+      
+      if (checkinForm) {
+        checkinForm.addEventListener('submit', function(e) {
+          // Ensure photo data is set before submission
+          if (capturedImageData) {
+            e.preventDefault();
+            submitForm();
+          }
+          // If no photo data, let form submit normally
+        });
+      }
 
       // Auto refresh current time and date
       function updateDateTime() {
@@ -318,11 +378,215 @@
         }
       }
 
-      // Initialize camera on page load
-      initCamera();
+      // Initialize camera on page load (only if camera element exists)
+      if (camera) {
+        initCamera();
+      }
 
       // Update time every second
       setInterval(updateDateTime, 1000);
+
+      // -----------------------------
+      // Checkout camera functionality
+      // -----------------------------
+      function showCheckoutFallback() {
+        if (!checkoutFallbackContainer) return;
+        checkoutFallbackContainer.classList.remove('d-none');
+        checkoutFallbackContainer.innerHTML = `
+          <div class="alert alert-warning">
+            <i class="icon-base bx bx-camera-off me-1"></i>
+            Camera unavailable. You may upload a clear photo instead.
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Upload Checkout Photo</label>
+            <input type="file" class="form-control" id="checkout-photo-upload" accept="image/*" required>
+          </div>
+        `;
+
+        const checkoutUploadInput = document.getElementById('checkout-photo-upload');
+        if (checkoutUploadInput) {
+          checkoutUploadInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+              const file = e.target.files[0];
+              const reader = new FileReader();
+              reader.onload = function(evt) {
+                checkoutImageData = evt.target.result;
+                checkoutCapturedPhoto.src = checkoutImageData;
+                checkoutPreview.classList.remove('d-none');
+                checkoutSubmitBtn.disabled = false;
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+        }
+      }
+
+      async function initCheckoutCamera() {
+        if (!checkoutCamera) {
+          console.error('Checkout camera element not found!');
+          return;
+        }
+        
+        try {
+          checkoutStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+              facingMode: 'user'
+            },
+            audio: false
+          });
+
+          checkoutCamera.srcObject = checkoutStream;
+          checkoutCamera.style.display = 'block';
+          checkoutCaptureBtn.disabled = false;
+          
+          if (checkoutStatus) {
+            checkoutStatus.innerHTML = '<i class="bx bx-camera"></i> Camera ready! Position your face in the frame and capture.';
+            checkoutStatus.className = 'text-success fw-medium';
+          }
+        } catch (error) {
+          console.error('Checkout camera error:', error.name, error.message);
+          
+          if (checkoutStatus) {
+            checkoutStatus.innerHTML = '<i class="bx bx-error-circle"></i> Camera not available: ' + error.message + '. Please use the upload option below.';
+            checkoutStatus.className = 'text-danger fw-medium';
+          }
+          
+          checkoutCaptureBtn.disabled = true;
+          checkoutStartBtn.classList.remove('d-none');
+          checkoutCaptureBtn.classList.add('d-none');
+          showCheckoutFallback();
+        }
+      }
+
+      function captureCheckoutPhoto() {
+        if (!checkoutCanvas || !checkoutCamera) return;
+        
+        const context = checkoutCanvas.getContext('2d');
+        checkoutCanvas.width = checkoutCamera.videoWidth;
+        checkoutCanvas.height = checkoutCamera.videoHeight;
+
+        context.drawImage(checkoutCamera, 0, 0, checkoutCanvas.width, checkoutCanvas.height);
+
+        checkoutImageData = checkoutCanvas.toDataURL('image/jpeg', 0.8);
+        checkoutCapturedPhoto.src = checkoutImageData;
+        
+        // Hide camera and show preview
+        checkoutCamera.style.display = 'none';
+        checkoutPreview.classList.remove('d-none');
+        checkoutCaptureBtn.classList.add('d-none');
+        checkoutRetakeBtn.classList.remove('d-none');
+        checkoutSubmitBtn.disabled = false;
+        
+        if (checkoutStatus) {
+          checkoutStatus.innerHTML = '<i class="bx bx-check-circle"></i> Photo captured successfully! Click below to check out.';
+          checkoutStatus.className = 'text-success fw-medium';
+        }
+
+        // Stop camera stream to free resources
+        if (checkoutStream) {
+          checkoutStream.getTracks().forEach(track => track.stop());
+          checkoutStream = null;
+        }
+      }
+
+      function retakeCheckoutPhoto() {
+        checkoutImageData = null;
+        checkoutPreview.classList.add('d-none');
+        checkoutSubmitBtn.disabled = true;
+        checkoutCaptureBtn.classList.remove('d-none');
+        checkoutCaptureBtn.classList.add('d-none');
+        checkoutRetakeBtn.classList.add('d-none');
+        checkoutStartBtn.classList.remove('d-none');
+        
+        if (checkoutStatus) {
+          checkoutStatus.innerHTML = '<i class="bx bx-info-circle"></i> Click "Start Camera" to capture a new photo.';
+          checkoutStatus.className = 'text-info fw-medium';
+        }
+      }
+
+      function submitCheckoutForm(e) {
+        e.preventDefault();
+        
+        if (!checkoutImageData) {
+          if (checkoutStatus) {
+            checkoutStatus.innerHTML = '<i class="bx bx-error-circle"></i> Please capture or upload a photo before submitting.';
+            checkoutStatus.className = 'text-danger fw-medium';
+          }
+          return;
+        }
+
+        // Show loading state
+        checkoutSubmitBtn.disabled = true;
+        checkoutSubmitBtn.innerHTML = '<i class="bx bx-loader bx-spin me-1"></i> Verifying face...';
+        
+        if (checkoutStatus) {
+          checkoutStatus.innerHTML = '<i class="bx bx-loader bx-spin"></i> Processing check-out... Please wait.';
+          checkoutStatus.className = 'text-info fw-medium';
+        }
+
+        // Convert image data to file and submit
+        fetch(checkoutImageData)
+          .then(res => res.blob())
+          .then(blob => {
+            const file = new File([blob], 'checkout-photo.jpg', { type: 'image/jpeg' });
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            checkoutPhotoInput.files = dt.files;
+            checkoutForm.submit();
+          })
+          .catch(error => {
+            console.error('Error submitting checkout form:', error);
+            checkoutSubmitBtn.disabled = false;
+            checkoutSubmitBtn.innerHTML = '<i class="icon-base bx bx-log-out me-1"></i> Complete Check-out';
+            
+            if (checkoutStatus) {
+              checkoutStatus.innerHTML = '<i class="bx bx-error-circle"></i> Error processing photo. Please try again.';
+              checkoutStatus.className = 'text-danger fw-medium';
+            }
+          });
+      }
+
+      // Checkout camera event listeners
+      if (checkoutStartBtn) {
+        checkoutStartBtn.addEventListener('click', function() {
+          // Disable button to prevent double clicks
+          checkoutStartBtn.disabled = true;
+          checkoutStartBtn.innerHTML = '<i class="bx bx-loader bx-spin me-1"></i> Starting camera...';
+          
+          // Hide start button, show capture button
+          checkoutStartBtn.classList.add('d-none');
+          checkoutCaptureBtn.classList.remove('d-none');
+          
+          if (checkoutStatus) {
+            checkoutStatus.innerHTML = '<i class="bx bx-loader bx-spin"></i> Requesting camera access...';
+            checkoutStatus.className = 'text-info fw-medium';
+            checkoutStatus.classList.remove('d-none');
+          }
+          
+          initCheckoutCamera();
+        });
+      }
+      
+      if (checkoutCaptureBtn) {
+        checkoutCaptureBtn.addEventListener('click', captureCheckoutPhoto);
+      }
+      
+      if (checkoutRetakeBtn) {
+        checkoutRetakeBtn.addEventListener('click', retakeCheckoutPhoto);
+      }
+      
+      if (checkoutForm) {
+        checkoutForm.addEventListener('submit', submitCheckoutForm);
+      }
+
+      // Cleanup camera stream on page unload
+      window.addEventListener('beforeunload', function() {
+        if (checkoutStream) {
+          checkoutStream.getTracks().forEach(track => track.stop());
+        }
+      });
     });
   </script>
 {% endblock %}

@@ -192,6 +192,109 @@
               </div>
             </div>
 
+            <!-- Address Information -->
+            <div class="row mb-4">
+              <div class="col-12">
+                <h6 class="text-primary mb-3">Address Information</h6>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.current_address.id_for_label }}" class="form-label">
+                  {{ form.current_address.label }}
+                  {% if form.current_address.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.current_address class="form-control" rows="3" %}
+                {% if form.current_address.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.current_address.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.current_address.help_text %}
+                  <small class="text-muted">{{ form.current_address.help_text }}</small>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <div class="form-check form-switch mb-2">
+                  <input class="form-check-input" type="checkbox" id="sameAsCurrentAddress">
+                  <label class="form-check-label" for="sameAsCurrentAddress">Same as Current Address</label>
+                </div>
+                <label for="{{ form.permanent_address.id_for_label }}" class="form-label">
+                  {{ form.permanent_address.label }}
+                  {% if form.permanent_address.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.permanent_address class="form-control" rows="3" %}
+                {% if form.permanent_address.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.permanent_address.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.permanent_address.help_text %}
+                  <small class="text-muted">{{ form.permanent_address.help_text }}</small>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Relative Information -->
+            <div class="row mb-4">
+              <div class="col-12">
+                <h6 class="text-primary mb-3">Emergency Contact Information</h6>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="{{ form.relative_name.id_for_label }}" class="form-label">
+                  {{ form.relative_name.label }}
+                  {% if form.relative_name.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.relative_name class="form-control" %}
+                {% if form.relative_name.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.relative_name.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.relative_name.help_text %}
+                  <small class="text-muted">{{ form.relative_name.help_text }}</small>
+                {% endif %}
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="{{ form.relation_with_employee.id_for_label }}" class="form-label">
+                  {{ form.relation_with_employee.label }}
+                  {% if form.relation_with_employee.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.relation_with_employee class="form-control" %}
+                {% if form.relation_with_employee.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.relation_with_employee.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.relation_with_employee.help_text %}
+                  <small class="text-muted">{{ form.relation_with_employee.help_text }}</small>
+                {% endif %}
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="{{ form.relative_contact.id_for_label }}" class="form-label">
+                  {{ form.relative_contact.label }}
+                  {% if form.relative_contact.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% render_field form.relative_contact class="form-control" %}
+                {% if form.relative_contact.errors %}
+                  <div class="text-danger small mt-1">
+                    {% for error in form.relative_contact.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.relative_contact.help_text %}
+                  <small class="text-muted">{{ form.relative_contact.help_text }}</small>
+                {% endif %}
+              </div>
+            </div>
+
             <!-- Profile Picture with Face Registration -->
             <div class="row mb-4">
               <div class="col-12">
@@ -347,6 +450,37 @@
 {% block page_js %}
   {{ block.super }}
   <script>
+    // Handle 'Same as Current Address' functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const sameAsCurrentCheckbox = document.getElementById('sameAsCurrentAddress');
+      const currentAddressField = document.getElementById('{{ form.current_address.id_for_label }}');
+      const permanentAddressField = document.getElementById('{{ form.permanent_address.id_for_label }}');
+
+      if (sameAsCurrentCheckbox && currentAddressField && permanentAddressField) {
+        // Initial check
+        if (currentAddressField.value && !permanentAddressField.value) {
+          sameAsCurrentCheckbox.checked = true;
+          permanentAddressField.value = currentAddressField.value;
+        }
+
+        // Add event listener for checkbox change
+        sameAsCurrentCheckbox.addEventListener('change', function() {
+          if (this.checked) {
+            permanentAddressField.value = currentAddressField.value;
+            permanentAddressField.readOnly = true;
+          } else {
+            permanentAddressField.readOnly = false;
+          }
+        });
+
+        // Update permanent address when current address changes and checkbox is checked
+        currentAddressField.addEventListener('input', function() {
+          if (sameAsCurrentCheckbox.checked) {
+            permanentAddressField.value = this.value;
+          }
+        });
+      }
+    });
     document.addEventListener('DOMContentLoaded', function() {
       // Auto-format PAN card to uppercase
       const panInput = document.getElementById('{{ form.pan_card.id_for_label }}');

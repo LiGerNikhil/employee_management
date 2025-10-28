@@ -11,13 +11,23 @@
       <div class="card">
         <div class="card-body text-center py-5">
           <h4 class="card-title text-primary mb-3">Welcome back, {{ employee.name }}!</h4>
-          <p class="mb-4 text-muted">Check in for today and view your monthly attendance calendar</p>
-          <div class="d-flex justify-content-center gap-3">
-            <a href="{% url 'employees:employee_profile' %}" class="btn btn-primary">My Profile</a>
+          <p class="mb-4 text-muted">Manage your attendance and view your monthly calendar</p>
+          <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="{% url 'employees:employee_profile' %}" class="btn btn-primary">
+              <i class="bx bx-user me-1"></i>My Profile
+            </a>
             {% if not has_checked_in_today %}
-              <a href="{% url 'employees:check_in' %}" class="btn btn-outline-success">Check In</a>
+              <a href="{% url 'employees:check_in' %}" class="btn btn-success">
+                <i class="bx bx-log-in me-1"></i>Check In
+              </a>
+            {% elif today_attendance and not today_attendance.check_out_time %}
+              <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#checkoutModal">
+                <i class="bx bx-log-out me-1"></i>Check Out
+              </button>
             {% else %}
-              <span class="btn btn-success disabled">Already Checked In</span>
+              <span class="badge bg-label-success p-3">
+                <i class="bx bx-check-circle me-1"></i>Attendance Complete for Today
+              </span>
             {% endif %}
           </div>
         </div>
@@ -25,27 +35,50 @@
     </div>
 
     <!-- Check-in Status -->
-    <div class="col-xl-6 col-md-6 col-12 mb-6">
+    <div class="col-xl-4 col-md-6 col-12 mb-6">
       <div class="card h-100">
         <div class="card-body text-center">
           <div class="avatar mx-auto mb-3" style="width: 60px; height: 60px;">
             <div class="avatar-initial {% if has_checked_in_today %}bg-label-success{% else %}bg-label-warning{% endif %} rounded">
-              <i class="icon-base bx {% if has_checked_in_today %}bx-check-circle{% else %}bx-time-five{% endif %} icon-24px"></i>
+              <i class="icon-base bx {% if has_checked_in_today %}bx-log-in{% else %}bx-time-five{% endif %} icon-24px"></i>
             </div>
           </div>
           {% if has_checked_in_today %}
             <h3 class="card-title mb-1 text-success">Checked In</h3>
-            <span class="text-muted">Today at {{ today_attendance.check_in_time|date:"H:i" }}</span>
+            <span class="text-muted">{{ today_attendance.check_in_time|date:"H:i" }}</span>
           {% else %}
             <h3 class="card-title mb-1 text-warning">Not Checked In</h3>
-            <span class="text-muted">Please check-in for today</span>
+            <span class="text-muted">Please check-in</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Check-out Status -->
+    <div class="col-xl-4 col-md-6 col-12 mb-6">
+      <div class="card h-100">
+        <div class="card-body text-center">
+          <div class="avatar mx-auto mb-3" style="width: 60px; height: 60px;">
+            <div class="avatar-initial {% if today_attendance.check_out_time %}bg-label-danger{% else %}bg-label-secondary{% endif %} rounded">
+              <i class="icon-base bx bx-log-out icon-24px"></i>
+            </div>
+          </div>
+          {% if today_attendance and today_attendance.check_out_time %}
+            <h3 class="card-title mb-1 text-danger">Checked Out</h3>
+            <span class="text-muted">{{ today_attendance.check_out_time|date:"H:i" }}</span>
+          {% elif has_checked_in_today %}
+            <h3 class="card-title mb-1 text-secondary">Not Checked Out</h3>
+            <span class="text-muted">Still working</span>
+          {% else %}
+            <h3 class="card-title mb-1 text-muted">No Check-out</h3>
+            <span class="text-muted">Check in first</span>
           {% endif %}
         </div>
       </div>
     </div>
 
     <!-- Monthly Attendance -->
-    <div class="col-xl-6 col-md-6 col-12 mb-6">
+    <div class="col-xl-4 col-md-6 col-12 mb-6">
       <div class="card h-100">
         <div class="card-body text-center">
           <div class="avatar mx-auto mb-3" style="width: 60px; height: 60px;">
@@ -54,27 +87,30 @@
             </div>
           </div>
           <h3 class="card-title mb-1">{{ total_month_attendance }}</h3>
-          <span class="text-muted">{{ month_name }} Check-ins</span>
+          <span class="text-muted">{{ month_name }} Days</span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Monthly Calendar -->
+  <!-- Interactive Monthly Calendar -->
   <div class="row">
     <div class="col-12 mb-6">
       <div class="card h-100">
         <div class="card-header d-flex align-items-center justify-content-between">
-          <h5 class="card-title m-0">{{ month_name }} {{ current_year }}</h5>
-          <span class="badge bg-label-info rounded-pill">{{ total_month_attendance }} days</span>
+          <div>
+            <h5 class="card-title m-0"><i class="bx bx-calendar me-2"></i>{{ month_name }} {{ current_year }}</h5>
+            <small class="text-muted">Hover over days for details</small>
+          </div>
+          <span class="badge bg-label-info rounded-pill">{{ total_month_attendance }} days present</span>
         </div>
         <div class="card-body">
-          <div class="calendar-grid">
+          <div class="interactive-calendar">
             <!-- Day Headers -->
             <div class="calendar-header d-flex mb-3">
               {% for day_name in day_names %}
-                <div class="calendar-day-header text-center flex-fill">
-                  <small class="text-muted">{{ day_name }}</small>
+                <div class="calendar-day-header text-center flex-fill fw-bold">
+                  <small class="text-primary">{{ day_name }}</small>
                 </div>
               {% endfor %}
             </div>
@@ -84,33 +120,116 @@
               <div class="calendar-week d-flex mb-2">
                 {% for day_data in week %}
                   {% if day_data.day %}
-                    <div class="calendar-day text-center flex-fill p-2 {% if day_data.is_today %}bg-primary text-white rounded{% elif day_data.attendance %}bg-success text-white{% elif day_data.is_past %}text-muted{% endif %}">
-                      <div class="day-number">{{ day_data.day }}</div>
-                      {% if day_data.attendance %}
-                        <small class="check-in-time">{{ day_data.attendance.check_in_time|date:"H:i" }}</small>
-                      {% endif %}
+                    <div class="calendar-day-cell flex-fill position-relative"
+                         data-status="{{ day_data.status }}"
+                         data-day="{{ day_data.day }}"
+                         {% if day_data.attendance %}
+                         data-checkin="{{ day_data.attendance.check_in_time|date:'H:i' }}"
+                         {% if day_data.attendance.check_out_time %}
+                         data-checkout="{{ day_data.attendance.check_out_time|date:'H:i' }}"
+                         data-duration="{{ day_data.attendance.duration }}"
+                         {% endif %}
+                         {% endif %}>
+                      <div class="day-content text-center p-2 rounded status-{{ day_data.status }}">
+                        <div class="day-number fw-bold mb-1">{{ day_data.day }}</div>
+                        {% if day_data.attendance %}
+                          <div class="day-times">
+                            <small class="d-block" style="font-size: 0.6rem;">
+                              <i class="bx bx-log-in"></i> {{ day_data.attendance.check_in_time|date:"H:i" }}
+                            </small>
+                            {% if day_data.attendance.check_out_time %}
+                              <small class="d-block" style="font-size: 0.6rem;">
+                                <i class="bx bx-log-out"></i> {{ day_data.attendance.check_out_time|date:"H:i" }}
+                              </small>
+                            {% endif %}
+                          </div>
+                        {% elif day_data.status == 'absent' %}
+                          <small class="d-block text-danger" style="font-size: 0.65rem;">
+                            <i class="bx bx-x"></i>
+                          </small>
+                        {% elif day_data.status == 'today-absent' %}
+                          <small class="d-block" style="font-size: 0.65rem;">
+                            <i class="bx bx-time"></i>
+                          </small>
+                        {% endif %}
+                      </div>
+                      
+                      <!-- Hover Tooltip -->
+                      <div class="day-tooltip">
+                        <div class="tooltip-content">
+                          <div class="fw-bold mb-2">{{ month_name }} {{ day_data.day }}, {{ current_year }}</div>
+                          {% if day_data.status == 'present' %}
+                            <div class="text-success mb-1"><i class="bx bx-check-circle"></i> Present (Full Day)</div>
+                            <div><i class="bx bx-log-in"></i> In: {{ day_data.attendance.check_in_time|date:"H:i" }}</div>
+                            <div><i class="bx bx-log-out"></i> Out: {{ day_data.attendance.check_out_time|date:"H:i" }}</div>
+                            <div class="mt-1"><i class="bx bx-time"></i> Duration: {{ day_data.attendance.duration }}</div>
+                          {% elif day_data.status == 'halfday' %}
+                            <div class="text-warning mb-1"><i class="bx bx-error-circle"></i> Half Day</div>
+                            <div><i class="bx bx-log-in"></i> In: {{ day_data.attendance.check_in_time|date:"H:i" }}</div>
+                            <div><i class="bx bx-log-out"></i> Out: {{ day_data.attendance.check_out_time|date:"H:i" }}</div>
+                            <div class="mt-1"><i class="bx bx-time"></i> Duration: {{ day_data.attendance.duration }}</div>
+                          {% elif day_data.status == 'incomplete' %}
+                            <div class="text-warning mb-1"><i class="bx bx-error"></i> Incomplete</div>
+                            <div><i class="bx bx-log-in"></i> In: {{ day_data.attendance.check_in_time|date:"H:i" }}</div>
+                            <div class="text-muted">No check-out recorded</div>
+                          {% elif day_data.status == 'today-complete' %}
+                            <div class="text-primary mb-1"><i class="bx bx-calendar-check"></i> Today - Complete</div>
+                            <div><i class="bx bx-log-in"></i> In: {{ day_data.attendance.check_in_time|date:"H:i" }}</div>
+                            <div><i class="bx bx-log-out"></i> Out: {{ day_data.attendance.check_out_time|date:"H:i" }}</div>
+                            <div class="mt-1"><i class="bx bx-time"></i> Duration: {{ day_data.attendance.duration }}</div>
+                          {% elif day_data.status == 'today-incomplete' %}
+                            <div class="text-primary mb-1"><i class="bx bx-calendar"></i> Today - In Progress</div>
+                            <div><i class="bx bx-log-in"></i> In: {{ day_data.attendance.check_in_time|date:"H:i" }}</div>
+                            <div class="text-muted">Still working...</div>
+                          {% elif day_data.status == 'today-absent' %}
+                            <div class="text-primary mb-1"><i class="bx bx-calendar"></i> Today</div>
+                            <div class="text-danger">Not checked in yet</div>
+                          {% elif day_data.status == 'absent' %}
+                            <div class="text-danger mb-1"><i class="bx bx-x-circle"></i> Absent</div>
+                            <div class="text-muted">No attendance record</div>
+                          {% elif day_data.status == 'future' %}
+                            <div class="text-muted"><i class="bx bx-calendar-event"></i> Future Date</div>
+                          {% endif %}
+                        </div>
+                      </div>
                     </div>
                   {% else %}
-                    <div class="calendar-day text-center flex-fill p-2"></div>
+                    <div class="calendar-day-cell flex-fill">
+                      <div class="day-content text-center p-2"></div>
+                    </div>
                   {% endif %}
                 {% endfor %}
               </div>
             {% endfor %}
           </div>
 
-          <div class="mt-3">
-            <div class="d-flex justify-content-center gap-4">
+          <!-- Legend -->
+          <div class="mt-4">
+            <h6 class="mb-3">Legend:</h6>
+            <div class="d-flex justify-content-center gap-3 flex-wrap">
               <div class="d-flex align-items-center">
-                <div class="bg-success rounded me-2" style="width: 16px; height: 16px;"></div>
-                <small>Checked In</small>
+                <div class="legend-box bg-success"></div>
+                <small>Present (Full Day)</small>
               </div>
               <div class="d-flex align-items-center">
-                <div class="bg-primary rounded me-2" style="width: 16px; height: 16px;"></div>
+                <div class="legend-box bg-info"></div>
+                <small>Half Day (&lt;6hrs)</small>
+              </div>
+              <div class="d-flex align-items-center">
+                <div class="legend-box bg-warning"></div>
+                <small>Incomplete</small>
+              </div>
+              <div class="d-flex align-items-center">
+                <div class="legend-box bg-primary"></div>
                 <small>Today</small>
               </div>
               <div class="d-flex align-items-center">
-                <div class="bg-light border rounded me-2" style="width: 16px; height: 16px;"></div>
-                <small>No Check-in</small>
+                <div class="legend-box bg-danger"></div>
+                <small>Absent</small>
+              </div>
+              <div class="d-flex align-items-center">
+                <div class="legend-box bg-light border"></div>
+                <small>Future</small>
               </div>
             </div>
           </div>
@@ -119,33 +238,76 @@
     </div>
   </div>
 
-  <!-- Recent Activity -->
+  <!-- Recent Attendance Logs -->
   <div class="row">
     <div class="col-12 mb-6">
       <div class="card h-100">
-        <div class="card-header">
-          <h5 class="card-title m-0">Recent Check-ins</h5>
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <h5 class="card-title m-0">Recent Attendance Logs</h5>
+          <span class="badge bg-label-primary">Last 10 Days</span>
         </div>
         <div class="card-body">
           {% if recent_attendance %}
-            {% for attendance in recent_attendance %}
-              <div class="d-flex align-items-center mb-3">
-                <div class="avatar avatar-sm me-3">
-                  <div class="avatar-initial bg-label-success rounded-circle">
-                    <i class="icon-base bx bx-check icon-16px"></i>
-                  </div>
-                </div>
-                <div class="flex-grow-1">
-                  <span class="fw-medium">{{ attendance.date|date:"d M Y, l" }}</span>
-                </div>
-                <small class="text-success">{{ attendance.check_in_time|date:"H:i" }}</small>
-              </div>
-            {% endfor %}
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Day</th>
+                    <th><i class="bx bx-log-in me-1"></i>Check-In</th>
+                    <th><i class="bx bx-log-out me-1"></i>Check-Out</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for attendance in recent_attendance %}
+                    <tr>
+                      <td class="fw-medium">{{ attendance.date|date:"d M Y" }}</td>
+                      <td>{{ attendance.date|date:"l" }}</td>
+                      <td>
+                        <span class="badge bg-label-success">
+                          <i class="bx bx-time-five"></i> {{ attendance.check_in_time|date:"H:i" }}
+                        </span>
+                      </td>
+                      <td>
+                        {% if attendance.check_out_time %}
+                          <span class="badge bg-label-danger">
+                            <i class="bx bx-time-five"></i> {{ attendance.check_out_time|date:"H:i" }}
+                          </span>
+                        {% else %}
+                          <span class="badge bg-label-secondary">Not checked out</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if attendance.check_out_time %}
+                          <span class="text-primary fw-medium">
+                            {{ attendance.duration|default:"-" }}
+                          </span>
+                        {% else %}
+                          <span class="text-muted">-</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if attendance.check_out_time %}
+                          <span class="badge bg-success">Complete</span>
+                        {% else %}
+                          <span class="badge bg-warning">Incomplete</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
           {% else %}
             <div class="text-center py-4">
-              <p class="text-muted">No check-ins yet this month</p>
+              <i class="bx bx-calendar-x display-4 text-muted mb-3"></i>
+              <p class="text-muted">No attendance records yet this month</p>
               {% if not has_checked_in_today %}
-                <a href="{% url 'employees:check_in' %}" class="btn btn-primary btn-sm">Check In for Today</a>
+                <a href="{% url 'employees:check_in' %}" class="btn btn-primary btn-sm">
+                  <i class="bx bx-log-in me-1"></i>Check In for Today
+                </a>
               {% endif %}
             </div>
           {% endif %}
@@ -207,4 +369,398 @@
       </div>
     </div>
   </div>
+
+  <!-- Check-Out Modal -->
+  <div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title text-white" id="checkoutModalLabel">
+            <i class="bx bx-log-out me-2"></i>Check Out
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-info mb-4">
+            <i class="bx bx-camera me-1"></i>
+            <strong>Photo Verification Required:</strong> Please capture a photo to complete your check-out.
+          </div>
+
+          <!-- Camera Interface -->
+          <div class="text-center mb-4">
+            <div class="camera-container mb-3">
+              <video id="checkout-camera" class="camera-preview rounded" autoplay playsinline muted style="width: 100%; max-width: 500px; height: auto;"></video>
+              <canvas id="checkout-canvas" class="d-none"></canvas>
+              <img id="checkout-preview" class="d-none rounded" style="width: 100%; max-width: 500px; height: auto;" />
+            </div>
+
+            <!-- Camera Controls -->
+            <div class="camera-controls mb-3">
+              <button type="button" id="checkout-capture-btn" class="btn btn-danger btn-lg me-2" disabled>
+                <i class="bx bx-camera me-1"></i>Capture Photo
+              </button>
+              <button type="button" id="checkout-retake-btn" class="btn btn-outline-secondary btn-lg d-none">
+                <i class="bx bx-refresh me-1"></i>Retake
+              </button>
+            </div>
+
+            <div id="checkout-camera-status" class="text-muted small">
+              <i class="bx bx-loader-alt bx-spin me-1"></i>Initializing camera...
+            </div>
+          </div>
+
+          <!-- Check-Out Form -->
+          <form id="checkout-form" method="post" action="{% url 'employees:check_out' %}" enctype="multipart/form-data" class="d-none">
+            {% csrf_token %}
+            <input type="file" name="check_out_photo" id="checkout-photo-input" accept="image/*" required class="d-none">
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bx bx-x me-1"></i>Cancel
+          </button>
+          <button type="button" id="checkout-submit-btn" class="btn btn-danger" disabled>
+            <i class="bx bx-log-out me-1"></i>Complete Check-Out
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block page_css %}
+<style>
+/* Interactive Calendar Styles */
+.interactive-calendar {
+  user-select: none;
+}
+
+.calendar-day-cell {
+  min-height: 80px;
+  margin: 2px;
+}
+
+.day-content {
+  height: 100%;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+/* Status Colors */
+.status-present {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+}
+
+.status-halfday {
+  background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+  color: white;
+}
+
+.status-incomplete {
+  background: linear-gradient(135deg, #ffc107 0%, #ffca2c 100%);
+  color: #000;
+}
+
+.status-today-complete {
+  background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+  color: white;
+  border: 2px solid #0d6efd;
+  box-shadow: 0 0 15px rgba(13, 110, 253, 0.5);
+  animation: pulse 2s infinite;
+}
+
+.status-today-incomplete {
+  background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+  color: white;
+  border: 2px solid #0d6efd;
+  box-shadow: 0 0 15px rgba(13, 110, 253, 0.5);
+  animation: pulse 2s infinite;
+}
+
+.status-today-absent {
+  background: linear-gradient(135deg, #0d6efd 0%, #6c757d 100%);
+  color: white;
+  border: 2px solid #0d6efd;
+  box-shadow: 0 0 15px rgba(13, 110, 253, 0.5);
+  animation: pulse 2s infinite;
+}
+
+.status-absent {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px dashed #dc3545;
+}
+
+.status-future {
+  background: #f8f9fa;
+  color: #6c757d;
+}
+
+.status-empty {
+  background: transparent;
+}
+
+/* Hover Effects */
+.day-content:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  z-index: 10;
+}
+
+.status-present:hover {
+  box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+}
+
+.status-halfday:hover {
+  box-shadow: 0 8px 20px rgba(23, 162, 184, 0.4);
+}
+
+.status-incomplete:hover {
+  box-shadow: 0 8px 20px rgba(255, 193, 7, 0.4);
+}
+
+.status-absent:hover {
+  box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
+}
+
+/* Tooltip Styles */
+.day-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 10px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.calendar-day-cell:hover .day-tooltip {
+  opacity: 1;
+  visibility: visible;
+  margin-bottom: 15px;
+}
+
+.tooltip-content {
+  background: #fff;
+  border: 2px solid #0d6efd;
+  border-radius: 8px;
+  padding: 12px 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  white-space: nowrap;
+  font-size: 0.85rem;
+  min-width: 200px;
+}
+
+.tooltip-content::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: #0d6efd;
+}
+
+/* Pulse Animation for Today */
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(13, 110, 253, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(13, 110, 253, 0.8);
+  }
+}
+
+/* Day Number */
+.day-number {
+  font-size: 1.1rem;
+}
+
+.day-times {
+  line-height: 1.2;
+}
+
+/* Legend Box */
+.legend-box {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  margin-right: 8px;
+  display: inline-block;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .calendar-day-cell {
+    min-height: 60px;
+  }
+  
+  .day-number {
+    font-size: 0.9rem;
+  }
+  
+  .day-times small {
+    font-size: 0.5rem !important;
+  }
+  
+  .tooltip-content {
+    font-size: 0.75rem;
+    min-width: 150px;
+    padding: 8px 12px;
+  }
+}
+
+/* Calendar Header */
+.calendar-day-header {
+  padding: 8px 0;
+  border-bottom: 2px solid #e9ecef;
+}
+
+/* Smooth transitions */
+* {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+</style>
+{% endblock %}
+
+{% block page_js %}
+<script>
+// Check-Out Modal Camera Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const checkoutModal = document.getElementById('checkoutModal');
+    const checkoutCamera = document.getElementById('checkout-camera');
+    const checkoutCanvas = document.getElementById('checkout-canvas');
+    const checkoutPreview = document.getElementById('checkout-preview');
+    const checkoutCaptureBtn = document.getElementById('checkout-capture-btn');
+    const checkoutRetakeBtn = document.getElementById('checkout-retake-btn');
+    const checkoutSubmitBtn = document.getElementById('checkout-submit-btn');
+    const checkoutForm = document.getElementById('checkout-form');
+    const checkoutPhotoInput = document.getElementById('checkout-photo-input');
+    const checkoutCameraStatus = document.getElementById('checkout-camera-status');
+    
+    let checkoutStream = null;
+    let checkoutPhotoBlob = null;
+    
+    // Initialize camera when modal is shown
+    if (checkoutModal) {
+        checkoutModal.addEventListener('shown.bs.modal', function() {
+            initCheckoutCamera();
+        });
+        
+        checkoutModal.addEventListener('hidden.bs.modal', function() {
+            stopCheckoutCamera();
+            resetCheckoutModal();
+        });
+    }
+    
+    function initCheckoutCamera() {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: 'user',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                } 
+            })
+            .then(function(stream) {
+                checkoutStream = stream;
+                checkoutCamera.srcObject = stream;
+                checkoutCamera.play();
+                checkoutCaptureBtn.disabled = false;
+                checkoutCameraStatus.innerHTML = '<i class="bx bx-check-circle me-1 text-success"></i>Camera ready';
+            })
+            .catch(function(error) {
+                console.error('Camera error:', error);
+                checkoutCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>Camera access denied or not available';
+            });
+        } else {
+            checkoutCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>Camera not supported on this device';
+        }
+    }
+    
+    function stopCheckoutCamera() {
+        if (checkoutStream) {
+            checkoutStream.getTracks().forEach(track => track.stop());
+            checkoutStream = null;
+        }
+    }
+    
+    function resetCheckoutModal() {
+        checkoutCamera.classList.remove('d-none');
+        checkoutPreview.classList.add('d-none');
+        checkoutCaptureBtn.classList.remove('d-none');
+        checkoutRetakeBtn.classList.add('d-none');
+        checkoutSubmitBtn.disabled = true;
+        checkoutPhotoBlob = null;
+        checkoutCameraStatus.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Initializing camera...';
+    }
+    
+    // Capture photo
+    if (checkoutCaptureBtn) {
+        checkoutCaptureBtn.addEventListener('click', function() {
+            const context = checkoutCanvas.getContext('2d');
+            checkoutCanvas.width = checkoutCamera.videoWidth;
+            checkoutCanvas.height = checkoutCamera.videoHeight;
+            context.drawImage(checkoutCamera, 0, 0);
+            
+            checkoutCanvas.toBlob(function(blob) {
+                checkoutPhotoBlob = blob;
+                const url = URL.createObjectURL(blob);
+                checkoutPreview.src = url;
+                
+                // Hide camera, show preview
+                checkoutCamera.classList.add('d-none');
+                checkoutPreview.classList.remove('d-none');
+                checkoutCaptureBtn.classList.add('d-none');
+                checkoutRetakeBtn.classList.remove('d-none');
+                checkoutSubmitBtn.disabled = false;
+                checkoutCameraStatus.innerHTML = '<i class="bx bx-check-circle me-1 text-success"></i>Photo captured successfully';
+                
+                stopCheckoutCamera();
+            }, 'image/jpeg', 0.95);
+        });
+    }
+    
+    // Retake photo
+    if (checkoutRetakeBtn) {
+        checkoutRetakeBtn.addEventListener('click', function() {
+            checkoutPreview.classList.add('d-none');
+            checkoutCamera.classList.remove('d-none');
+            checkoutCaptureBtn.classList.remove('d-none');
+            checkoutRetakeBtn.classList.add('d-none');
+            checkoutSubmitBtn.disabled = true;
+            checkoutPhotoBlob = null;
+            initCheckoutCamera();
+        });
+    }
+    
+    // Submit check-out
+    if (checkoutSubmitBtn) {
+        checkoutSubmitBtn.addEventListener('click', function() {
+            if (!checkoutPhotoBlob) {
+                alert('Please capture a photo first');
+                return;
+            }
+            
+            // Create file from blob
+            const file = new File([checkoutPhotoBlob], 'checkout_photo.jpg', { type: 'image/jpeg' });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            checkoutPhotoInput.files = dataTransfer.files;
+            
+            // Disable button and show loading
+            checkoutSubmitBtn.disabled = true;
+            checkoutSubmitBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Processing...';
+            
+            // Submit form
+            checkoutForm.submit();
+        });
+    }
+});
+</script>
 {% endblock %}
