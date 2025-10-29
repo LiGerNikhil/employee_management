@@ -338,7 +338,8 @@
                     <th>Date</th>
                     <th>Day</th>
                     <th>Check-in Time</th>
-                    <th>Photo</th>
+                    <th>Check-out Time</th>
+                    <th>Duration</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -352,33 +353,35 @@
                         <span class="fw-medium">{{ attendance.date|date:"l" }}</span>
                       </td>
                       <td>
-                        <span class="fw-medium">{{ attendance.check_in_time|date:"H:i" }}</span>
+                        <span class="badge bg-success">
+                          <i class="bx bx-log-in me-1"></i>{{ attendance.check_in_time|date:"H:i" }}
+                        </span>
                       </td>
                       <td>
-                        {% if attendance.check_in_photo %}
-                          <img src="{{ attendance.check_in_photo.url }}" alt="Check-in photo" class="attendance-photo-small" data-bs-toggle="modal" data-bs-target="#detailPhotoModal{{ attendance.id }}" style="cursor: pointer;">
-                          <!-- Modal for full-size photo -->
-                          <div class="modal fade" id="detailPhotoModal{{ attendance.id }}" tabindex="-1">
-                            <div class="modal-dialog modal-lg">
-                              <div class="modal-content">
-                                <div class="modal-header">
-                                  <h5 class="modal-title">{{ employee.full_name }} - Check-in Photo</h5>
-                                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body text-center">
-                                  <img src="{{ attendance.check_in_photo.url }}" alt="Check-in photo" class="img-fluid rounded">
-                                  <div class="mt-3">
-                                    <p class="mb-1"><strong>Date:</strong> {{ attendance.date|date:"d M Y, l" }}</p>
-                                    <p class="mb-0"><strong>Time:</strong> {{ attendance.check_in_time|date:"H:i:s" }}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        {% else %}
-                          <span class="text-muted">
-                            <i class="icon-base bx bx-camera-off"></i>
+                        {% if attendance.check_out_time %}
+                          <span class="badge bg-danger">
+                            <i class="bx bx-log-out me-1"></i>{{ attendance.check_out_time|date:"H:i" }}
                           </span>
+                        {% else %}
+                          <span class="badge bg-warning">
+                            <i class="bx bx-time-five me-1"></i>Active
+                          </span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if attendance.check_out_time and attendance.check_in_time %}
+                          {% widthratio attendance.check_out_time.hour 1 60 as checkout_minutes %}
+                          {% widthratio attendance.check_in_time.hour 1 60 as checkin_minutes %}
+                          <span class="text-muted">
+                            <i class="bx bx-time me-1"></i>
+                            {% if attendance.total_hours %}
+                              {{ attendance.total_hours|floatformat:1 }}h
+                            {% else %}
+                              -
+                            {% endif %}
+                          </span>
+                        {% else %}
+                          <span class="text-muted">-</span>
                         {% endif %}
                       </td>
                       <td>
@@ -445,6 +448,15 @@
                   <i class="icon-base bx bx-arrow-back icon-24px text-secondary mb-2"></i>
                   <h6 class="mb-1">Back to List</h6>
                   <small class="text-muted">Return to employees list</small>
+                </div>
+              </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+              <a href="{% url 'employees:employee_change_password' employee.pk %}" class="text-decoration-none">
+                <div class="border rounded p-3 text-center h-100">
+                  <i class="icon-base bx bx-lock-alt icon-24px text-danger mb-2"></i>
+                  <h6 class="mb-1">Change Password</h6>
+                  <small class="text-muted">Reset employee password</small>
                 </div>
               </a>
             </div>

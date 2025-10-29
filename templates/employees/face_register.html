@@ -1,135 +1,256 @@
-{% extends 'layout/blank.html' %}
+{% extends layout_path %}
 {% load static %}
 
-{% block title %}Register Your Face{% endblock %}
+{% block title %}Register Face | Employee Management System{% endblock %}
 
 {% block content %}
-<div class="container-xxl flex-grow-1 container-p-y">
-    <div class="row">
-        <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Face Registration</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-4">
-                            <div class="video-container mb-3">
-                                <video id="video" width="100%" height="auto" autoplay></video>
-                            </div>
-                            <div class="text-center">
-                                <button id="capture" class="btn btn-primary">Capture & Register Face</button>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">Instructions</h5>
-                                </div>
-                                <div class="card-body">
-                                    <ol>
-                                        <li>Position yourself in a well-lit area</li>
-                                        <li>Look directly at the camera</li>
-                                        <li>Make sure your face is clearly visible</li>
-                                        <li>Click 'Capture & Register Face' to take a photo</li>
-                                        <li>Wait for confirmation that your face has been registered</li>
-                                    </ol>
-                                    <div id="previewContainer" class="text-center d-none">
-                                        <h6>Preview</h6>
-                                        <img id="preview" class="img-fluid rounded" style="max-width: 200px;">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <div class="row">
+    <div class="col-12">
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="card-title m-0">Register Your Face</h5>
+            <small class="text-muted">Capture a clear photo to enable face-based check-in/out.</small>
+          </div>
+          {% if has_registered_face %}
+            <span class="badge bg-label-success"><i class="bx bx-check me-1"></i>Face already registered</span>
+          {% else %}
+            <span class="badge bg-label-warning"><i class="bx bx-error-alt me-1"></i>Registration required</span>
+          {% endif %}
         </div>
+        <div class="card-body">
+          <div class="row g-4">
+            <div class="col-xl-6">
+              <div class="border rounded p-3 h-100 d-flex flex-column">
+                <div class="camera-wrapper position-relative mb-3">
+                  <video id="face-register-video" class="w-100 rounded shadow-sm" autoplay playsinline muted></video>
+                  <canvas id="face-register-canvas" class="d-none"></canvas>
+                  <div class="camera-overlay position-absolute top-0 start-0 w-100 h-100 d-none" id="camera-overlay"></div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                  <button type="button" id="start-camera" class="btn btn-outline-primary">
+                    <i class="bx bx-video me-1"></i>Start Camera
+                  </button>
+                  <button type="button" id="capture-face" class="btn btn-primary" disabled>
+                    <i class="bx bx-camera me-1"></i>Capture & Register
+                  </button>
+                  <button type="button" id="retake-face" class="btn btn-outline-secondary d-none">
+                    <i class="bx bx-refresh me-1"></i>Retake
+                  </button>
+                </div>
+                <div class="mt-3 small text-muted" id="camera-status">
+                  <i class="bx bx-info-circle me-1"></i>Allow camera access to begin.
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-6">
+              <div class="border rounded p-3 h-100 d-flex flex-column justify-content-between">
+                <div>
+                  <h6 class="mb-3">Tips for a successful capture</h6>
+                  <ul class="list-unstyled mb-4 small">
+                    <li class="mb-2"><i class="bx bx-check-circle text-success me-1"></i>Use a well-lit environment without backlighting.</li>
+                    <li class="mb-2"><i class="bx bx-check-circle text-success me-1"></i>Keep only your face in frame and look straight at the camera.</li>
+                    <li class="mb-2"><i class="bx bx-check-circle text-success me-1"></i>Remove masks or accessories that hide your face.</li>
+                    <li class="mb-2"><i class="bx bx-check-circle text-success me-1"></i>Hold still while the photo is captured.</li>
+                  </ul>
+                  <div id="face-preview-container" class="text-center d-none">
+                    <h6 class="mb-2">Captured Preview</h6>
+                    <img id="face-preview" class="img-fluid rounded shadow-sm" style="max-width: 240px;" alt="Face preview" />
+                  </div>
+                </div>
+                <div id="registration-alert" class="alert d-none mt-4" role="alert"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-</div>
+  </div>
 {% endblock %}
 
-{% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const video = document.getElementById('video');
-        const captureBtn = document.getElementById('capture');
-        const preview = document.getElementById('preview');
-        const previewContainer = document.getElementById('previewContainer');
-        let stream = null;
+{% block page_js %}
+  {{ block.super }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const videoEl = document.getElementById('face-register-video');
+      const canvasEl = document.getElementById('face-register-canvas');
+      const startBtn = document.getElementById('start-camera');
+      const captureBtn = document.getElementById('capture-face');
+      const retakeBtn = document.getElementById('retake-face');
+      const previewContainer = document.getElementById('face-preview-container');
+      const previewImg = document.getElementById('face-preview');
+      const cameraStatus = document.getElementById('camera-status');
+      const messageBox = document.getElementById('registration-alert');
+      let stream = null;
 
-        // Access the webcam
-        async function startCamera() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        facingMode: 'user' 
-                    },
-                    audio: false 
-                });
-                video.srcObject = stream;
-            } catch (err) {
-                console.error("Error accessing the camera: ", err);
-                alert("Error accessing the camera. Please make sure you've granted camera permissions.");
+      function setMessage(type, text) {
+        messageBox.className = 'alert alert-' + type;
+        messageBox.textContent = text;
+        messageBox.classList.remove('d-none');
+      }
+
+      function describeCameraError(error) {
+        if (!error) {
+          return 'Camera access failed for an unknown reason.';
+        }
+        const name = error.name || '';
+        const message = error.message || '';
+        switch (name) {
+          case 'NotAllowedError':
+          case 'PermissionDeniedError':
+            return 'Camera permission was denied. Please allow camera access in your browser settings and try again.';
+          case 'NotFoundError':
+          case 'DevicesNotFoundError':
+            return 'No camera device was found. Connect a camera and try again.';
+          case 'NotReadableError':
+          case 'TrackStartError':
+            return 'The camera is already in use by another application. Close other programs using the camera and retry.';
+          case 'OverconstrainedError':
+          case 'ConstraintNotSatisfiedError':
+            return 'The requested camera settings are not supported. We will try a more compatible setup automatically.';
+          case 'SecurityError':
+            if (window.isSecureContext === false) {
+              return 'Camera access requires HTTPS or localhost. Please use a secure connection.';
             }
+            return 'Camera access is blocked by browser security settings.';
+          default:
+            if (message && message.toLowerCase().includes('insecure')) {
+              return 'Camera access requires HTTPS or localhost. Please reload the page over a secure connection.';
+            }
+            return message || 'Unable to access camera. Please allow permissions and try again.';
+        }
+      }
+
+      async function acquireStream() {
+        const attempts = [
+          { video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: false },
+          { video: { facingMode: 'user' }, audio: false },
+          { video: true }
+        ];
+
+        let lastError = null;
+        for (const constraints of attempts) {
+          try {
+            return await navigator.mediaDevices.getUserMedia(constraints);
+          } catch (err) {
+            lastError = err;
+            // Continue to next constraints set
+          }
+        }
+        throw lastError;
+      }
+
+      async function startCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setMessage('danger', 'Camera is not supported in this browser. Please use a modern browser like Chrome, Edge, or Firefox.');
+          cameraStatus.innerHTML = '<i class="bx bx-error text-danger me-1"></i>Camera not supported.';
+          return;
         }
 
-        // Capture image from video stream
-        captureBtn.addEventListener('click', function() {
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // Show preview
-            preview.src = canvas.toDataURL('image/jpeg');
-            previewContainer.classList.remove('d-none');
-            
-            // Send to server
-            registerFace(canvas.toDataURL('image/jpeg'));
-        });
+        startBtn.disabled = true;
+        captureBtn.disabled = true;
+        messageBox.classList.add('d-none');
+        cameraStatus.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Requesting camera access...';
 
-        // Send the captured image to the server
-        async function registerFace(imageData) {
-            try {
-                const response = await fetch('{% url "employees:face_register" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    },
-                    body: `image=${encodeURIComponent(imageData)}`
-                });
+        try {
+          // Stop any existing stream before starting a new one
+          stopStream();
 
-                const result = await response.json();
-                
-                if (result.success) {
-                    alert('Face registered successfully!');
-                    if (result.profile_picture) {
-                        // Update profile picture preview if available
-                        document.querySelector('.user-avatar').src = result.profile_picture;
-                    }
-                } else {
-                    alert('Error: ' + (result.error || 'Failed to register face'));
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('An error occurred while registering your face.');
-            }
+          stream = await acquireStream();
+          videoEl.srcObject = stream;
+
+          // Some browsers require explicit play
+          try {
+            await videoEl.play();
+          } catch (playError) {
+            console.warn('Video play() failed initially, retrying...', playError);
+            await new Promise(resolve => setTimeout(resolve, 200));
+            await videoEl.play();
+          }
+
+          captureBtn.disabled = false;
+          cameraStatus.innerHTML = '<i class="bx bx-check-circle text-success me-1"></i>Camera ready. Capture when you are centered.';
+        } catch (err) {
+          console.error('Camera error:', err);
+          const friendly = describeCameraError(err);
+          setMessage('danger', friendly);
+          cameraStatus.innerHTML = '<i class="bx bx-error text-danger me-1"></i>' + friendly;
+        } finally {
+          startBtn.disabled = false;
         }
+      }
 
-        // Start the camera when the page loads
+      function stopStream() {
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          stream = null;
+        }
+        captureBtn.disabled = true;
+      }
+
+      async function submitFace(dataUrl) {
+        setMessage('info', 'Uploading and verifying your face. Please wait…');
+        try {
+          const response = await fetch('{% url "employees:face_register" %}', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: 'image=' + encodeURIComponent(dataUrl)
+          });
+          const result = await response.json();
+
+          if (result.success) {
+            setMessage('success', result.message || 'Face registered successfully!');
+          } else {
+            setMessage('danger', result.error || 'Unable to register face. Please try again.');
+            retakeBtn.classList.add('d-none');
+            captureBtn.disabled = false;
+          }
+        } catch (error) {
+          console.error(error);
+          setMessage('danger', 'Unexpected error while registering face.');
+          retakeBtn.classList.add('d-none');
+          captureBtn.disabled = false;
+        }
+      }
+
+      startBtn.addEventListener('click', () => {
+        setMessage('info', 'Initializing camera…');
+        previewContainer.classList.add('d-none');
+        retakeBtn.classList.add('d-none');
         startCamera();
+      });
 
-        // Clean up the stream when the page is unloaded
-        window.addEventListener('beforeunload', function() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
-        });
+      captureBtn.addEventListener('click', () => {
+        if (!stream) {
+          setMessage('danger', 'Camera is not active. Start the camera first.');
+          return;
+        }
+
+        canvasEl.width = videoEl.videoWidth;
+        canvasEl.height = videoEl.videoHeight;
+        const ctx = canvasEl.getContext('2d');
+        ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+        const dataUrl = canvasEl.toDataURL('image/jpeg');
+
+        previewImg.src = dataUrl;
+        previewContainer.classList.remove('d-none');
+        captureBtn.disabled = true;
+        retakeBtn.classList.remove('d-none');
+        stopStream();
+
+        submitFace(dataUrl);
+      });
+
+      retakeBtn.addEventListener('click', () => {
+        previewContainer.classList.add('d-none');
+        messageBox.classList.add('d-none');
+        startCamera();
+      });
+
+      window.addEventListener('beforeunload', stopStream);
     });
-</script>
+  </script>
 {% endblock %}

@@ -16,12 +16,13 @@
 
         <div class="card-body">
           {% if messages %}
-            {% for message in messages %}
-              <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            {% endfor %}
+            <div class="mb-4">
+              {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-secondary{% endif %} mb-2" role="alert">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
           {% endif %}
 
           <div class="text-center mb-4">
@@ -177,6 +178,7 @@
               <button type="button" id="checkout-retake-btn" class="btn btn-outline-secondary btn-lg d-none">
                 <i class="bx bx-refresh me-1"></i>Retake
               </button>
+
             </div>
 
             <div id="checkout-camera-status" class="text-muted small mb-3">
@@ -217,6 +219,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const checkinPreview = document.getElementById('checkin-preview');
     const checkinCaptureBtn = document.getElementById('checkin-capture-btn');
     const checkinRetakeBtn = document.getElementById('checkin-retake-btn');
+    const checkinUploadBtn = document.getElementById('checkin-upload-btn');
     const checkinSubmitBtn = document.getElementById('checkin-submit-btn');
     const checkinForm = document.getElementById('checkin-form');
     const checkinPhotoInput = document.getElementById('checkin-photo-input');
@@ -226,7 +229,58 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let checkinStream = null;
     let checkinPhotoBlob = null;
-    
+    let checkinPreviewUrl = null;
+
+    function describeCameraError(error) {
+        if (!error) {
+            return 'Camera access failed for an unknown reason.';
+        }
+        const name = error.name || '';
+        const message = error.message || '';
+        switch (name) {
+            case 'NotAllowedError':
+            case 'PermissionDeniedError':
+                return 'Camera permission was denied. Please allow camera access in your browser settings and try again.';
+            case 'NotFoundError':
+            case 'DevicesNotFoundError':
+                return 'No camera device was found. Connect a camera and try again.';
+            case 'NotReadableError':
+            case 'TrackStartError':
+                return 'The camera is already in use by another application. Close other programs using the camera and retry.';
+            case 'OverconstrainedError':
+            case 'ConstraintNotSatisfiedError':
+                return 'The requested camera settings are not supported. We will try a more compatible setup automatically.';
+            case 'SecurityError':
+                if (window.isSecureContext === false) {
+                    return 'Camera access requires HTTPS or localhost. Please use a secure connection.';
+                }
+                return 'Camera access is blocked by browser security settings.';
+            default:
+                if (message && message.toLowerCase().includes('insecure')) {
+                    return 'Camera access requires HTTPS or localhost. Please reload the page over a secure connection.';
+                }
+                return message || 'Unable to access camera. Please allow permissions and try again.';
+        }
+    }
+
+    async function acquireCameraStream() {
+        const attempts = [
+            { video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: false },
+            { video: { facingMode: 'user' }, audio: false },
+            { video: true }
+        ];
+
+        let lastError = null;
+        for (const constraints of attempts) {
+            try {
+                return await navigator.mediaDevices.getUserMedia(constraints);
+            } catch (err) {
+                lastError = err;
+            }
+        }
+        throw lastError;
+    }
+
     // Get user's current location for check-in
     function getCheckinLocation() {
         return new Promise((resolve, reject) => {
@@ -269,19 +323,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize camera when modal is shown
     if (checkinModal) {
         checkinModal.addEventListener('shown.bs.modal', function() {
-            // Get location first
+            // Kick off camera immediately
+            initCheckinCamera();
+
+            // Request location in parallel
             getCheckinLocation()
                 .then(coords => {
                     checkinLatitudeInput.value = coords.latitude;
                     checkinLongitudeInput.value = coords.longitude;
                     console.log('Check-in location obtained:', coords);
-                    initCheckinCamera();
                 })
                 .catch(error => {
                     console.error('Location error:', error);
-                    checkinCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>' + error.message;
-                    checkinCaptureBtn.disabled = true;
-                    alert(error.message + '\n\nLocation access is required for check-in. Please close this modal, enable location services, and try again.');
+                    alert(error.message + '\n\nLocation access is required for check-in. Please enable location services and try again.');
                 });
         });
         
@@ -293,38 +347,45 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function initCheckinCamera() {
         console.log('Initializing check-in camera...');
-        
+
+        if (!window.isSecureContext) {
+            const msg = 'Camera access requires HTTPS or running the site on localhost. Please reload via https:// or http://localhost.';
+            checkinCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>' + msg;
+            console.error(msg);
+            checkinCaptureBtn.disabled = true;
+            return;
+        }
+
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             console.error('MediaDevices API not supported');
             checkinCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>Camera not supported on this device';
             checkinCaptureBtn.disabled = true;
             return;
         }
-        
-        checkinCameraStatus.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Requesting camera access...';
-        
-        try {
-            // First, try with ideal constraints
-            let stream;
+
+        if (navigator.permissions && navigator.permissions.query) {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: 'user',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    } 
-                });
-            } catch (e) {
-                console.warn('Failed with ideal constraints, trying basic:', e);
-                // Fallback to basic constraints
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: true
-                });
+                const cameraPermission = await navigator.permissions.query({ name: 'camera' });
+                if (cameraPermission.state === 'denied') {
+                    const msg = 'Browser camera permission is blocked. Please enable camera access in your browser settings and reload the page.';
+                    checkinCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>' + msg;
+                    checkinCaptureBtn.disabled = true;
+                    return;
+                }
+            } catch (permErr) {
+                console.warn('Unable to query camera permissions:', permErr);
             }
-            
-            console.log('Check-in camera stream obtained:', stream);
-            console.log('Video tracks:', stream.getVideoTracks());
-            
+        }
+
+        checkinCaptureBtn.disabled = true;
+        checkinCameraStatus.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Requesting camera access...';
+
+        try {
+            // Stop existing stream before requesting a new one
+            stopCheckinCamera();
+
+            const stream = await acquireCameraStream();
+
             checkinStream = stream;
             checkinCamera.srcObject = stream;
             checkinCamera.style.display = 'block';
@@ -350,23 +411,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error('Camera error:', error.name, error.message, error);
-            let errorMsg = 'Camera access denied or not available';
-            
-            if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-                errorMsg = 'Camera permission denied. Please reload the page and allow camera access.';
-            } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-                errorMsg = 'No camera found on this device.';
-            } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
-                errorMsg = 'Camera is already in use. Please close other tabs/apps using the camera.';
-            } else if (error.name === 'OverconstrainedError') {
-                errorMsg = 'Camera constraints cannot be satisfied.';
-            } else if (error.name === 'SecurityError') {
-                errorMsg = 'Camera access blocked by security settings.';
-            }
-            
+            const errorMsg = describeCameraError(error);
             checkinCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>' + errorMsg;
             checkinCaptureBtn.disabled = true;
-            alert('Camera Error: ' + errorMsg + '\n\nPlease check your browser settings and try again.');
         }
     }
     
@@ -378,12 +425,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function resetCheckinModal() {
+        if (checkinPreviewUrl) {
+            URL.revokeObjectURL(checkinPreviewUrl);
+            checkinPreviewUrl = null;
+        }
         checkinCamera.style.display = 'none';
         checkinPreview.classList.add('d-none');
         checkinCaptureBtn.classList.remove('d-none');
         checkinRetakeBtn.classList.add('d-none');
         checkinSubmitBtn.disabled = true;
         checkinPhotoBlob = null;
+        checkinPhotoInput.value = '';
         // Clear location values
         checkinLatitudeInput.value = '';
         checkinLongitudeInput.value = '';
@@ -400,8 +452,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             checkinCanvas.toBlob(function(blob) {
                 checkinPhotoBlob = blob;
-                const url = URL.createObjectURL(blob);
-                checkinPreview.src = url;
+                if (checkinPreviewUrl) {
+                    URL.revokeObjectURL(checkinPreviewUrl);
+                }
+                checkinPreviewUrl = URL.createObjectURL(blob);
+                checkinPreview.src = checkinPreviewUrl;
                 
                 // Hide camera, show preview
                 checkinCamera.style.display = 'none';
@@ -426,7 +481,43 @@ document.addEventListener('DOMContentLoaded', function() {
             checkinRetakeBtn.classList.add('d-none');
             checkinSubmitBtn.disabled = true;
             checkinPhotoBlob = null;
+            if (checkinPreviewUrl) {
+                URL.revokeObjectURL(checkinPreviewUrl);
+                checkinPreviewUrl = null;
+            }
+            checkinPhotoInput.value = '';
             initCheckinCamera();
+        });
+    }
+
+    if (checkinUploadBtn) {
+        checkinUploadBtn.addEventListener('click', function() {
+            stopCheckinCamera();
+            checkinCaptureBtn.classList.add('d-none');
+            checkinCamera.style.display = 'none';
+            checkinRetakeBtn.classList.remove('d-none');
+            checkinCameraStatus.innerHTML = '<i class="bx bx-upload me-1"></i>Select a photo using your device camera or gallery.';
+            checkinPhotoInput.click();
+        });
+    }
+
+    if (checkinPhotoInput) {
+        checkinPhotoInput.addEventListener('change', function(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            checkinPhotoBlob = file;
+            if (checkinPreviewUrl) {
+                URL.revokeObjectURL(checkinPreviewUrl);
+            }
+            checkinPreviewUrl = URL.createObjectURL(file);
+            checkinPreview.src = checkinPreviewUrl;
+            checkinPreview.classList.remove('d-none');
+            checkinSubmitBtn.disabled = false;
+            checkinRetakeBtn.classList.remove('d-none');
+            checkinCameraStatus.innerHTML = '<i class="bx bx-check-circle me-1 text-success"></i>Photo selected successfully.';
         });
     }
     
@@ -451,9 +542,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Create file from blob
-            const file = new File([checkinPhotoBlob], 'checkin_photo.jpg', { type: 'image/jpeg' });
+            let fileToSubmit;
+            if (checkinPhotoBlob instanceof File) {
+                fileToSubmit = checkinPhotoBlob;
+            } else {
+                fileToSubmit = new File([checkinPhotoBlob], 'checkin_photo.jpg', { type: 'image/jpeg' });
+            }
             const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
+            dataTransfer.items.add(fileToSubmit);
             checkinPhotoInput.files = dataTransfer.files;
             
             console.log('Submitting check-in form with location:', {
@@ -479,6 +575,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const checkoutPreview = document.getElementById('checkout-preview');
     const checkoutCaptureBtn = document.getElementById('checkout-capture-btn');
     const checkoutRetakeBtn = document.getElementById('checkout-retake-btn');
+    const checkoutUploadBtn = document.getElementById('checkout-upload-btn');
     const checkoutSubmitBtn = document.getElementById('checkout-submit-btn');
     const checkoutForm = document.getElementById('checkout-form');
     const checkoutPhotoInput = document.getElementById('checkout-photo-input');
@@ -488,6 +585,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let checkoutStream = null;
     let checkoutPhotoBlob = null;
+    let checkoutPreviewUrl = null;
     
     // Get user's current location for checkout
     function getCheckoutLocation() {
@@ -531,19 +629,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize camera when modal is shown
     if (checkoutModal) {
         checkoutModal.addEventListener('shown.bs.modal', function() {
-            // Get location first
+            // Start camera immediately
+            initCheckoutCamera();
+
+            // Request location concurrently
             getCheckoutLocation()
                 .then(coords => {
                     checkoutLatitudeInput.value = coords.latitude;
                     checkoutLongitudeInput.value = coords.longitude;
                     console.log('Checkout location obtained:', coords);
-                    initCheckoutCamera();
                 })
                 .catch(error => {
                     console.error('Location error:', error);
-                    checkoutCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>' + error.message;
-                    checkoutCaptureBtn.disabled = true;
-                    alert(error.message + '\n\nLocation access is required for check-out. Please close this modal, enable location services, and try again.');
+                    alert(error.message + '\n\nLocation access is required for check-out. Please enable location services and try again.');
                 });
         });
         
@@ -555,38 +653,45 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function initCheckoutCamera() {
         console.log('Initializing checkout camera...');
-        
+
+        if (!window.isSecureContext) {
+            const msg = 'Camera access requires HTTPS or running the site on localhost. Please reload via https:// or http://localhost.';
+            checkoutCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>' + msg;
+            console.error(msg);
+            checkoutCaptureBtn.disabled = true;
+            return;
+        }
+
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             console.error('MediaDevices API not supported');
             checkoutCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>Camera not supported on this device';
             checkoutCaptureBtn.disabled = true;
             return;
         }
-        
-        checkoutCameraStatus.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Requesting camera access...';
-        
-        try {
-            // First, try with ideal constraints
-            let stream;
+
+        if (navigator.permissions && navigator.permissions.query) {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: 'user',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    } 
-                });
-            } catch (e) {
-                console.warn('Failed with ideal constraints, trying basic:', e);
-                // Fallback to basic constraints
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: true
-                });
+                const cameraPermission = await navigator.permissions.query({ name: 'camera' });
+                if (cameraPermission.state === 'denied') {
+                    const msg = 'Browser camera permission is blocked. Please enable camera access in your browser settings and reload the page.';
+                    checkoutCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>' + msg;
+                    checkoutCaptureBtn.disabled = true;
+                    return;
+                }
+            } catch (permErr) {
+                console.warn('Unable to query camera permissions:', permErr);
             }
-            
-            console.log('Checkout camera stream obtained:', stream);
-            console.log('Video tracks:', stream.getVideoTracks());
-            
+        }
+
+        checkoutCaptureBtn.disabled = true;
+        checkoutCameraStatus.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Requesting camera access...';
+
+        try {
+            // Stop existing stream to avoid conflicts
+            stopCheckoutCamera();
+
+            const stream = await acquireCameraStream();
+
             checkoutStream = stream;
             checkoutCamera.srcObject = stream;
             checkoutCamera.style.display = 'block';
@@ -612,20 +717,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error('Camera error:', error.name, error.message, error);
-            let errorMsg = 'Camera access denied or not available';
-            
-            if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-                errorMsg = 'Camera permission denied. Please reload the page and allow camera access.';
-            } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-                errorMsg = 'No camera found on this device.';
-            } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
-                errorMsg = 'Camera is already in use. Please close other tabs/apps using the camera.';
-            } else if (error.name === 'OverconstrainedError') {
-                errorMsg = 'Camera constraints cannot be satisfied.';
-            } else if (error.name === 'SecurityError') {
-                errorMsg = 'Camera access blocked by security settings.';
-            }
-            
+            const errorMsg = describeCameraError(error);
             checkoutCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>' + errorMsg;
             checkoutCaptureBtn.disabled = true;
             alert('Camera Error: ' + errorMsg + '\n\nPlease check your browser settings and try again.');
@@ -640,12 +732,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function resetCheckoutModal() {
+        if (checkoutPreviewUrl) {
+            URL.revokeObjectURL(checkoutPreviewUrl);
+            checkoutPreviewUrl = null;
+        }
         checkoutCamera.style.display = 'none';
         checkoutPreview.classList.add('d-none');
         checkoutCaptureBtn.classList.remove('d-none');
         checkoutRetakeBtn.classList.add('d-none');
         checkoutSubmitBtn.disabled = true;
         checkoutPhotoBlob = null;
+        checkoutPhotoInput.value = '';
         // Clear location values
         checkoutLatitudeInput.value = '';
         checkoutLongitudeInput.value = '';
@@ -662,8 +759,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             checkoutCanvas.toBlob(function(blob) {
                 checkoutPhotoBlob = blob;
-                const url = URL.createObjectURL(blob);
-                checkoutPreview.src = url;
+                if (checkoutPreviewUrl) {
+                    URL.revokeObjectURL(checkoutPreviewUrl);
+                }
+                checkoutPreviewUrl = URL.createObjectURL(blob);
+                checkoutPreview.src = checkoutPreviewUrl;
                 
                 // Hide camera, show preview
                 checkoutCamera.style.display = 'none';
@@ -688,7 +788,43 @@ document.addEventListener('DOMContentLoaded', function() {
             checkoutRetakeBtn.classList.add('d-none');
             checkoutSubmitBtn.disabled = true;
             checkoutPhotoBlob = null;
+            if (checkoutPreviewUrl) {
+                URL.revokeObjectURL(checkoutPreviewUrl);
+                checkoutPreviewUrl = null;
+            }
+            checkoutPhotoInput.value = '';
             initCheckoutCamera();
+        });
+    }
+
+    if (checkoutUploadBtn) {
+        checkoutUploadBtn.addEventListener('click', function() {
+            stopCheckoutCamera();
+            checkoutCaptureBtn.classList.add('d-none');
+            checkoutCamera.style.display = 'none';
+            checkoutRetakeBtn.classList.remove('d-none');
+            checkoutCameraStatus.innerHTML = '<i class="bx bx-upload me-1"></i>Select a photo using your device camera or gallery.';
+            checkoutPhotoInput.click();
+        });
+    }
+
+    if (checkoutPhotoInput) {
+        checkoutPhotoInput.addEventListener('change', function(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            checkoutPhotoBlob = file;
+            if (checkoutPreviewUrl) {
+                URL.revokeObjectURL(checkoutPreviewUrl);
+            }
+            checkoutPreviewUrl = URL.createObjectURL(file);
+            checkoutPreview.src = checkoutPreviewUrl;
+            checkoutPreview.classList.remove('d-none');
+            checkoutSubmitBtn.disabled = false;
+            checkoutRetakeBtn.classList.remove('d-none');
+            checkoutCameraStatus.innerHTML = '<i class="bx bx-check-circle me-1 text-success"></i>Photo selected successfully.';
         });
     }
     
@@ -713,9 +849,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Create file from blob
-            const file = new File([checkoutPhotoBlob], 'checkout_photo.jpg', { type: 'image/jpeg' });
+            let fileToSubmit;
+            if (checkoutPhotoBlob instanceof File) {
+                fileToSubmit = checkoutPhotoBlob;
+            } else {
+                fileToSubmit = new File([checkoutPhotoBlob], 'checkout_photo.jpg', { type: 'image/jpeg' });
+            }
             const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
+            dataTransfer.items.add(fileToSubmit);
             checkoutPhotoInput.files = dataTransfer.files;
             
             console.log('Submitting check-out form with location:', {

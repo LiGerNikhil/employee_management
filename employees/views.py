@@ -6,9 +6,11 @@ from django.contrib import messages
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
 from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 from django.utils import timezone
 from django.http import JsonResponse
+from django.template.loader import render_to_string
 from web_project import TemplateLayout
 from web_project.template_helpers.theme import TemplateHelper
 
@@ -25,6 +27,9 @@ from .forms import EmployeeForm, EmployeeUpdateForm, SuperAdminProfileForm
 from .face_utils import extract_face_encoding, extract_face_encoding_from_file, compare_faces, get_match_tolerance
 from django.db import transaction
 
+from django.contrib.auth.hashers import make_password
+from django.utils import timezone
+from .models import PasswordResetRequest
 
 # Helper functions to check user roles
 def is_superadmin(user):
@@ -149,6 +154,12 @@ def admin_dashboard(request):
     urgent_tickets = Ticket.objects.filter(priority='urgent', status__in=['open', 'in_progress']).count()
     resolved_today = Ticket.objects.filter(resolved_at__date=today).count()
     
+    # Password Reset Requests
+    pending_password_requests = PasswordResetRequest.objects.filter(status='pending').count()
+    recent_password_requests = PasswordResetRequest.objects.filter(
+        status='pending'
+    ).select_related('employee').order_by('-created_at')[:5]
+    
     # Recent Activity Logs
     recent_failures = AttendanceLog.objects.filter(
         success=False
@@ -189,6 +200,8 @@ def admin_dashboard(request):
         'open_tickets': open_tickets,
         'urgent_tickets': urgent_tickets,
         'resolved_today': resolved_today,
+        'pending_password_requests': pending_password_requests,
+        'recent_password_requests': recent_password_requests,
         'month_checkins': month_checkins,
         'month_tickets': month_tickets,
         'attendance_rate': round(attendance_rate, 1),
@@ -342,6 +355,7 @@ def employee_dashboard(request):
         'my_resolved_tickets': my_resolved_tickets,
         'recent_tickets': recent_tickets,
         'day_names': ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        'requires_face_registration': not employee.has_registered_face,
     })
     return render(request, 'employees/dashboard/employee_dashboard.html', context)
 
@@ -367,6 +381,8 @@ def my_attendance_logs(request):
             date__month=int(month),
             date__year=int(year)
         )
+    elif month:
+        attendance_records = attendance_records.filter(date__month=int(month))
     elif year:
         attendance_records = attendance_records.filter(date__year=int(year))
     
@@ -438,6 +454,37 @@ class EmployeeListView(ListView):
         return queryset.order_by('name', 'full_name')
 
 
+@login_required
+@user_passes_test(is_superadmin)
+def employee_live_search(request):
+    """Return filtered employees for live search (AJAX only)."""
+    if request.headers.get('x-requested-with') != 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+
+    query = request.GET.get('q', '').strip()
+    employees = Employee.objects.all()
+
+    if query:
+        employees = employees.filter(
+            Q(name__icontains=query) |
+            Q(full_name__icontains=query) |
+            Q(email__icontains=query) |
+            Q(contact__icontains=query)
+        )
+
+    employees = employees.order_by('name', 'full_name')[:25]
+    html = render_to_string(
+        'employees/partials/_employee_rows.html',
+        {'employees': employees, 'request': request}
+    )
+
+    return JsonResponse({
+        'success': True,
+        'html': html,
+        'count': employees.count(),
+    })
+
+
 @method_decorator(login_required, name='dispatch')
 @method_decorator(user_passes_test(is_superadmin), name='dispatch')
 class EmployeeCreateView(CreateView):
@@ -456,21 +503,13 @@ class EmployeeCreateView(CreateView):
         return context
 
     def form_valid(self, form):
-        # Enforce presence of password
         password = form.cleaned_data.get('password')
         if not password or len(password) < 8:
-            messages.error(self.request, 'Password is required (minimum 8 characters).')
-            return self.form_invalid(form)
-
-        # Enforce that a face photo is captured/uploaded at creation
-        uploaded_file = self.request.FILES.get('profile_picture')
-        if not uploaded_file:
-            messages.error(self.request, 'Face photo is required to register the employee. Please capture a clear face photo.')
+            form.add_error('password', 'Password is required (minimum 8 characters).')
             return self.form_invalid(form)
 
         try:
             with transaction.atomic():
-                # Create user account
                 user = User.objects.create_user(
                     username=form.cleaned_data['email'],
                     email=form.cleaned_data['email'],
@@ -480,32 +519,23 @@ class EmployeeCreateView(CreateView):
                     is_active=True
                 )
 
-                # Prepare employee instance
                 employee = form.save(commit=False)
                 employee.user = user
+                employee.profile_picture = None
+                employee.face_registered = False
+                employee.face_encoding = None
+                employee.face_registered_at = None
                 employee.save()
 
-                # Process face encoding from uploaded image and enforce uniqueness
-                try:
-                    from .face_utils import process_and_store_face_encoding
-                    result = process_and_store_face_encoding(employee, employee.profile_picture.path)
-                except Exception as e:
-                    # Any error in face processing should abort creation
-                    raise
-
-                if not result.get('success'):
-                    # Abort and rollback
-                    messages.error(self.request, f'Face registration failed: {result.get("message", "Unknown error")}. Employee not created.')
-                    # Raising exception will rollback due to atomic block
-                    raise ValueError(result.get('message') or 'Face registration failed')
-
-                messages.success(self.request, f'✓ Employee created successfully with face registration! {result.get("message", "")}')
-
+                self.object = employee
+                messages.success(
+                    self.request,
+                    'Employee created successfully. Ask the employee to log in and register their face using their camera before using attendance.'
+                )
+                return redirect(self.get_success_url())
         except Exception as e:
-            # Ensure form shows errors and nothing persists
+            form.add_error(None, f'Could not create employee: {e}')
             return self.form_invalid(form)
-
-        return super().form_valid(form)
 
 
 @method_decorator(login_required, name='dispatch')
@@ -525,33 +555,8 @@ class EmployeeUpdateView(UpdateView):
         return context
 
     def form_valid(self, form):
-        # Check if profile picture was updated
-        old_profile_picture = None
-        if self.object.pk:
-            old_employee = Employee.objects.get(pk=self.object.pk)
-            old_profile_picture = old_employee.profile_picture
-        
-        # Save the form
         response = super().form_valid(form)
-        employee = self.object
-        
-        # Process face encoding if profile picture was changed
-        if employee.profile_picture and employee.profile_picture != old_profile_picture:
-            try:
-                from .face_utils import process_and_store_face_encoding
-                result = process_and_store_face_encoding(employee, employee.profile_picture.path)
-                
-                if result['success']:
-                    messages.success(self.request, f'Employee updated successfully! {result["message"]}')
-                else:
-                    messages.warning(self.request, f'Employee updated but face registration failed: {result["message"]}')
-            except ImportError:
-                messages.warning(self.request, 'Employee updated but face recognition library not available.')
-            except Exception as e:
-                messages.warning(self.request, f'Employee updated but face processing error: {str(e)}')
-        else:
-            messages.success(self.request, 'Employee updated successfully!')
-        
+        messages.success(self.request, 'Employee updated successfully.')
         return response
 
     def get_success_url(self):
@@ -596,6 +601,10 @@ def employee_toggle_status(request, pk):
 
         status = "activated" if employee.user.is_active else "deactivated"
         messages.success(request, f'Employee {employee.full_name} has been {status} successfully!')
+
+        next_url = request.POST.get('next')
+        if next_url:
+            return redirect(next_url)
 
         # Redirect back to the page that made the request
         referer = request.META.get('HTTP_REFERER')
@@ -728,6 +737,14 @@ def check_in(request):
     # Get today's attendance record if it exists
     today_attendance = Attendance.objects.filter(employee=employee, date=today).first()
 
+    if not employee.has_registered_face:
+        face_register_url = f"{reverse('employees:face_register')}?next={reverse('employees:check_in')}"
+        messages.warning(
+            request,
+            'Please register your face before checking in. Use the camera to capture your profile so we can verify you during attendance.'
+        )
+        return redirect(face_register_url)
+
     if request.method == 'POST':
         # Validate geolocation first
         from employees.geolocation_utils import validate_coordinates, is_within_office_premises
@@ -798,7 +815,7 @@ def check_in(request):
             messages.error(request, 'Please capture a photo to check in.')
             return redirect('employees:check_in')
 
-        if not (employee.face_registered and employee.face_encoding):
+        if not employee.has_registered_face:
             # Log failed attempt
             AttendanceLog.objects.create(
                 employee=employee,
@@ -1023,64 +1040,80 @@ def admin_attendance_logs(request):
     return render(request, 'employees/admin_attendance_logs.html', context)
 
 
-# Face Recognition Views
-
+@require_http_methods(["GET", "POST"])
+@login_required
+@user_passes_test(is_employee)
 def face_registration(request):
-    """
-    View for registering a face for the current employee
-    """
-    if not request.user.is_authenticated or not hasattr(request.user, 'employee_profile'):
-        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=401)
-    
+    """Allow an employee to register (or re-register) their face using the webcam."""
     employee = request.user.employee_profile
-    
-    if request.method == 'POST' and 'image' in request.POST:
-        try:
-            # Get the base64 image data
-            image_data = request.POST['image'].split('base64,')[1]
-            image_data = base64.b64decode(image_data)
-            
-            # Convert to numpy array
-            nparr = np.frombuffer(image_data, np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            
-            # Convert BGR to RGB (face_recognition uses RGB)
-            rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            
-            # Find face locations
-            face_locations = face_recognition.face_locations(rgb_img)
-            
-            if not face_locations:
-                return JsonResponse({'success': False, 'error': 'No face detected'})
-                
-            if len(face_locations) > 1:
-                return JsonResponse({'success': False, 'error': 'Multiple faces detected'})
-                
-            # Encode the face
-            face_encoding = face_recognition.face_encodings(rgb_img, face_locations)[0]
-            
-            # Save to employee model
-            employee.set_face_encoding(face_encoding)
-            
-            # Save the image as profile picture
-            _, buffer = cv2.imencode('.jpg', img)
-            employee.profile_picture.save(
-                f'profile_{employee.id}.jpg',
-                ContentFile(buffer.tobytes()),
-                save=False
-            )
-            employee.save()
-            
+
+    if request.method == 'GET':
+        context = TemplateLayout.init(self={}, context={})
+        context.update({
+            'layout_path': TemplateHelper.set_layout('layout_vertical.html', context),
+            'employee': employee,
+            'has_registered_face': employee.has_registered_face,
+        })
+        return render(request, 'employees/face_register.html', context)
+
+    # POST: process uploaded base64 image
+    image_payload = request.POST.get('image')
+    if not image_payload or 'base64,' not in image_payload:
+        return JsonResponse({'success': False, 'error': 'Invalid image data supplied'}, status=400)
+
+    try:
+        image_data = base64.b64decode(image_payload.split('base64,')[1])
+
+        nparr = np.frombuffer(image_data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            return JsonResponse({'success': False, 'error': 'Could not decode image'}, status=400)
+
+        rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        face_locations = face_recognition.face_locations(rgb_img)
+
+        if not face_locations:
+            return JsonResponse({'success': False, 'error': 'No face detected. Please try again.'}, status=400)
+        if len(face_locations) > 1:
+            return JsonResponse({'success': False, 'error': 'Multiple faces detected. Capture only your face.'}, status=400)
+
+        face_encoding = face_recognition.face_encodings(rgb_img, face_locations)[0]
+
+        # Prevent registering duplicate faces for different employees
+        tolerance = get_match_tolerance()
+        conflicting_employee = None
+        for other in Employee.objects.filter(face_registered=True).exclude(pk=employee.pk).iterator():
+            known_encoding = other.get_face_encoding()
+            if known_encoding is None:
+                continue
+            result = compare_faces(known_encoding, face_encoding, tolerance=tolerance)
+            if result['match']:
+                conflicting_employee = other
+                break
+
+        if conflicting_employee:
             return JsonResponse({
-                'success': True,
-                'message': 'Face registered successfully',
-                'profile_picture': employee.profile_picture.url if employee.profile_picture else ''
-            })
-            
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+                'success': False,
+                'error': (
+                    'This face already belongs to another employee. '
+                    'Please contact your administrator if you believe this is a mistake.'
+                )
+            }, status=400)
+
+        # Persist encoding and profile photo
+        employee.set_face_encoding(face_encoding)
+        _, buffer = cv2.imencode('.jpg', img)
+        file_name = f'profile_{employee.id}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.jpg'
+        employee.profile_picture.save(file_name, ContentFile(buffer.tobytes()), save=False)
+        employee.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Face registered successfully! You can now use face-enabled check-in/out.',
+            'profile_picture': employee.profile_picture.url if employee.profile_picture else ''
+        })
+    except Exception as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
 
 
 def mark_attendance(request):
@@ -1315,7 +1348,7 @@ def check_out(request):
             return redirect('employees:check_in')
 
         # Validation 4: Face must be registered
-        if not (employee.face_registered and employee.face_encoding):
+        if not employee.has_registered_face:
             # Log failed attempt
             AttendanceLog.objects.create(
                 employee=employee,
@@ -1371,10 +1404,15 @@ def check_out(request):
                 return redirect('employees:check_in')
 
             # All validations passed - save check-out
+            check_out_time = timezone.now()
             attendance.check_out_photo = check_out_photo
-            attendance.check_out_time = timezone.now()
+            attendance.check_out_time = check_out_time
             attendance.check_out_latitude = user_latitude
             attendance.check_out_longitude = user_longitude
+            # Determine half-day status (worked hours below threshold)
+            HALF_DAY_THRESHOLD_SECONDS = int(4.5 * 60 * 60)
+            time_worked = check_out_time - attendance.check_in_time
+            attendance.half_day = time_worked.total_seconds() < HALF_DAY_THRESHOLD_SECONDS
             attendance.save()
             
             # Log successful check-out
@@ -1760,9 +1798,14 @@ def employee_attendance_calendar(request):
                 
                 if attendance:
                     if attendance.check_out_time:
-                        status = 'present'
-                        status_class = 'bg-success'
-                        status_icon = 'bx-check-circle'
+                        if attendance.is_half_day:
+                            status = 'halfday'
+                            status_class = 'bg-info'
+                            status_icon = 'bx-time-five'
+                        else:
+                            status = 'present'
+                            status_class = 'bg-success'
+                            status_icon = 'bx-check-circle'
                     else:
                         status = 'checked-in'
                         status_class = 'bg-warning'
@@ -1783,6 +1826,7 @@ def employee_attendance_calendar(request):
                     'status': status,
                     'status_class': status_class,
                     'status_icon': status_icon,
+                    'is_half_day': attendance.is_half_day if attendance else False,
                     'is_today': date_obj == current_date.date(),
                     'is_future': date_obj > current_date.date(),
                     'is_holiday': is_holiday_day
@@ -1792,9 +1836,13 @@ def employee_attendance_calendar(request):
     # Calculate statistics for the month (excluding holidays)
     total_working_days = sum(1 for week in calendar_data for day in week 
                             if day and not day['is_holiday'] and day['date'] <= current_date.date())
-    present_days = sum(1 for record in attendance_records if record.check_out_time)
-    absent_days = total_working_days - present_days
-    
+    present_days = sum(1 for record in attendance_records if record.check_out_time and not record.is_half_day)
+    half_day_days = sum(1 for record in attendance_records if record.check_out_time and record.is_half_day)
+    absent_days = max(total_working_days - (present_days + half_day_days), 0)
+    attendance_ratio = 0
+    if total_working_days > 0:
+        attendance_ratio = (present_days + (half_day_days * 0.5)) / total_working_days * 100
+
     # Get month navigation
     prev_month = month - 1 if month > 1 else 12
     prev_year = year if month > 1 else year - 1
@@ -1824,8 +1872,9 @@ def employee_attendance_calendar(request):
         'current_date': current_date,
         'total_working_days': total_working_days,
         'present_days': present_days,
+        'half_day_days': half_day_days,
         'absent_days': absent_days,
-        'attendance_percentage': round((present_days / total_working_days * 100) if total_working_days > 0 else 0, 1),
+        'attendance_percentage': round(attendance_ratio, 1),
         'months_list': months_list,
         'year_range': year_range,
     })
@@ -1924,7 +1973,8 @@ def admin_attendance_calendar(request):
                 
                 # Count statuses
                 checked_in_count = len([a for a in day_attendance if not a.check_out_time])
-                checked_out_count = len([a for a in day_attendance if a.check_out_time])
+                half_day_count = len([a for a in day_attendance if a.check_out_time and a.is_half_day])
+                checked_out_count = len([a for a in day_attendance if a.check_out_time and not a.is_half_day])
                 total_present = len(day_attendance)
                 
                 # Calculate absent (only for past working days, not holidays)
@@ -1938,6 +1988,7 @@ def admin_attendance_calendar(request):
                     'attendance_records': day_attendance,
                     'checked_in_count': checked_in_count,
                     'checked_out_count': checked_out_count,
+                    'half_day_count': half_day_count,
                     'total_present': total_present,
                     'absent_count': absent_count,
                     'is_today': date_obj == current_date.date(),
@@ -1949,13 +2000,15 @@ def admin_attendance_calendar(request):
     # Calculate monthly statistics (excluding holidays)
     total_working_days = sum(1 for week in calendar_data for day in week 
                             if day and not day['is_holiday'] and day['date'] <= current_date.date())
-    
+
     if employee_id:
         employee_records = attendance_records.filter(employee_id=employee_id)
-        total_present = employee_records.filter(check_out_time__isnull=False).count()
+        total_present = employee_records.filter(check_out_time__isnull=False, half_day=False).count()
+        total_half_days = employee_records.filter(check_out_time__isnull=False, half_day=True).count()
         total_absent = total_working_days - employee_records.count()
     else:
-        total_present = attendance_records.filter(check_out_time__isnull=False).count()
+        total_present = attendance_records.filter(check_out_time__isnull=False, half_day=False).count()
+        total_half_days = attendance_records.filter(check_out_time__isnull=False, half_day=True).count()
         total_expected = total_working_days * len(employees)
         total_absent = total_expected - attendance_records.count()
     
@@ -1989,9 +2042,156 @@ def admin_attendance_calendar(request):
         'selected_employee': selected_employee,
         'total_working_days': total_working_days,
         'total_present': total_present,
+        'total_half_days': total_half_days,
         'total_absent': total_absent,
         'months_list': months_list,
         'year_range': year_range,
     })
     
     return render(request, 'employees/attendance/admin_calendar.html', context)
+
+# Employee Password Reset Request (Public - No Login Required)
+def password_reset_request(request):
+    """Employee submits password reset request"""
+    if request.method == 'POST':
+        email_or_username = request.POST.get('email_or_username')
+        reason = request.POST.get('reason', '')
+        
+        try:
+            # Try to find employee by email or username
+            employee = None
+            if '@' in email_or_username:
+                employee = Employee.objects.get(email=email_or_username)
+            else:
+                user = User.objects.get(username=email_or_username)
+                employee = Employee.objects.get(user=user)
+            
+            # Create password reset request
+            reset_request = PasswordResetRequest.objects.create(
+                employee=employee,
+                email=employee.email,
+                reason=reason,
+                status='pending'
+            )
+            
+            messages.success(request, f'Password reset request submitted successfully! Request ID: #{reset_request.id}')
+            return redirect('employees:login')
+            
+        except (Employee.DoesNotExist, User.DoesNotExist):
+            messages.error(request, 'No employee found with this email or username.')
+        except Exception as e:
+            messages.error(request, f'Error submitting request: {str(e)}')
+    
+    return render(request, 'employees/password_reset_request.html')
+
+
+# Admin Views for Password Management
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def password_reset_requests_list(request):
+    """Admin view to see all password reset requests"""
+    status_filter = request.GET.get('status', 'all')
+    
+    requests_query = PasswordResetRequest.objects.select_related('employee', 'processed_by').all()
+    
+    if status_filter != 'all':
+        requests_query = requests_query.filter(status=status_filter)
+    
+    pending_count = PasswordResetRequest.objects.filter(status='pending').count()
+    approved_count = PasswordResetRequest.objects.filter(status='approved').count()
+    rejected_count = PasswordResetRequest.objects.filter(status='rejected').count()
+    
+    context = TemplateLayout.init(request, {
+        'reset_requests': requests_query,
+        'status_filter': status_filter,
+        'pending_count': pending_count,
+        'approved_count': approved_count,
+        'rejected_count': rejected_count,
+    })
+    
+    return render(request, 'employees/admin/password_reset_requests.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def process_password_reset_request(request, request_id):
+    """Admin processes a password reset request"""
+    reset_request = get_object_or_404(PasswordResetRequest, id=request_id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        new_password = request.POST.get('new_password')
+        admin_notes = request.POST.get('admin_notes', '')
+        
+        if action == 'approve' and new_password:
+            # Update employee password
+            employee = reset_request.employee
+            employee.user.password = make_password(new_password)
+            employee.user.save()
+            
+            # Update request
+            reset_request.status = 'approved'
+            reset_request.new_password = new_password  # Store temporarily for notification
+            reset_request.processed_by = request.user
+            reset_request.processed_at = timezone.now()
+            reset_request.admin_notes = admin_notes
+            reset_request.save()
+            
+            messages.success(request, f'Password reset approved for {employee.name}. New password: {new_password}')
+            
+        elif action == 'reject':
+            reset_request.status = 'rejected'
+            reset_request.processed_by = request.user
+            reset_request.processed_at = timezone.now()
+            reset_request.admin_notes = admin_notes
+            reset_request.save()
+            
+            messages.warning(request, f'Password reset request rejected for {reset_request.employee.name}')
+        
+        return redirect('employees:password_reset_requests')
+    
+    context = TemplateLayout.init(request, {
+        'reset_request': reset_request,
+    })
+    
+    return render(request, 'employees/admin/process_password_reset.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def employee_change_password(request, employee_id):
+    """Admin directly changes employee password"""
+    employee = get_object_or_404(Employee, id=employee_id)
+    
+    if request.method == 'POST':
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        admin_notes = request.POST.get('admin_notes', '')
+        
+        if new_password and new_password == confirm_password:
+            # Update password
+            employee.user.password = make_password(new_password)
+            employee.user.save()
+            
+            # Create a record of this change
+            PasswordResetRequest.objects.create(
+                employee=employee,
+                email=employee.email,
+                reason=f'Password changed by admin: {admin_notes}',
+                status='approved',
+                new_password=new_password,
+                processed_by=request.user,
+                processed_at=timezone.now(),
+                admin_notes=admin_notes
+            )
+            
+            messages.success(request, f'Password updated successfully for {employee.name}')
+            return redirect('employees:employee_detail', pk=employee.id)
+        else:
+            messages.error(request, 'Passwords do not match!')
+    
+    context = TemplateLayout.init(request, {
+        'employee': employee,
+    })
+    
+    return render(request, 'employees/admin/change_employee_password.html', context)

@@ -30,15 +30,6 @@
         </div>
 
         <div class="card-body">
-          {% if messages %}
-            {% for message in messages %}
-              <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            {% endfor %}
-          {% endif %}
-
           <form method="post" enctype="multipart/form-data" novalidate>
             {% csrf_token %}
 
@@ -295,91 +286,14 @@
               </div>
             </div>
 
-            <!-- Profile Picture with Face Registration -->
+            <!-- Face registration handled by employees -->
             <div class="row mb-4">
               <div class="col-12">
-                <h6 class="text-primary mb-3">Face Registration</h6>
-                <div class="alert alert-info">
+                <div class="alert alert-info mb-0">
                   <i class="icon-base bx bx-face me-1"></i>
-                  <strong>Face Recognition Setup:</strong> Please capture or upload a clear photo of the employee's face for identity verification during check-ins. This enables automatic face matching.
+                  Face registration is now completed by each employee after their first login. You can create the account here; the employee will capture their own face and profile photo from their dashboard.
                 </div>
               </div>
-
-              <!-- Camera Interface (for new employees) -->
-              {% if not form.instance.pk %}
-                <div class="col-md-6 mb-3">
-                  <div class="camera-section">
-                    <!-- Camera Preview -->
-                    <div class="camera-container mb-3">
-                      <video id="profile-camera" class="camera-preview" autoplay playsinline muted></video>
-                      <canvas id="profile-canvas" class="d-none"></canvas>
-                    </div>
-
-                    <!-- Camera Controls -->
-                    <div class="camera-controls mb-3">
-                      <button type="button" id="profile-start-camera-btn" class="btn btn-primary me-2">
-                        <i class="icon-base bx bx-video me-1"></i>Start Camera
-                      </button>
-                      <button type="button" id="profile-capture-btn" class="btn btn-success me-2" disabled>
-                        <i class="icon-base bx bx-camera me-1"></i>Capture Face
-                      </button>
-                      <button type="button" id="profile-retake-btn" class="btn btn-outline-secondary d-none">
-                        <i class="icon-base bx bx-refresh me-1"></i>Retake
-                      </button>
-                    </div>
-
-                    <!-- Photo Preview -->
-                    <div id="profile-photo-preview" class="d-none mb-3">
-                      <img id="profile-captured-photo" class="photo-preview" alt="Profile photo">
-                      <div id="face-status" class="mt-2">
-                        <small class="text-muted">Processing face recognition...</small>
-                      </div>
-                    </div>
-
-                    <!-- Hidden inputs for face data -->
-                    <input type="hidden" name="profile_photo_data" id="profile-photo-data" accept="image/*">
-                    <input type="hidden" name="face_encoding_data" id="face-encoding-data">
-                  </div>
-                </div>
-              {% endif %}
-
-              <!-- File Upload Option -->
-              <div class="col-md-6 mb-3">
-                <label for="{{ form.profile_picture.id_for_label }}" class="form-label">
-                  {{ form.profile_picture.label }}
-                  {% if not form.instance.pk %}<span class="text-muted">(Alternative: Upload face photo)</span>{% endif %}
-                </label>
-                {% render_field form.profile_picture class="form-control" %}
-                {% if form.profile_picture.errors %}
-                  <div class="text-danger small mt-1">
-                    {% for error in form.profile_picture.errors %}
-                      {{ error }}
-                    {% endfor %}
-                  </div>
-                {% endif %}
-                {% if form.profile_picture.help_text %}
-                  <small class="text-muted">{{ form.profile_picture.help_text }}</small>
-                {% endif %}
-              </div>
-
-              <!-- Current Profile Picture (for updates) -->
-              {% if form.instance.profile_picture %}
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Current Profile Picture</label>
-                  <div class="d-flex align-items-center gap-3">
-                    <img src="{{ form.instance.profile_picture.url }}" alt="Current Profile" class="rounded-circle profile-preview">
-                    <div>
-                      {% if form.instance.face_registered %}
-                        <p class="mb-1 text-success">✓ Face recognition active</p>
-                        <small class="text-muted">Registered: {{ form.instance.face_registered_at|date:"M d, Y H:i" }}</small>
-                      {% else %}
-                        <p class="mb-1 text-warning">⚠ Face not registered</p>
-                        <small class="text-muted">Upload new photo to enable face recognition</small>
-                      {% endif %}
-                    </div>
-                  </div>
-                </div>
-              {% endif %}
             </div>
 
             <!-- Password (only for new employees) -->

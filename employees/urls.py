@@ -18,6 +18,7 @@ urlpatterns = [
 
     # Employee CRUD URLs (Admin only)
     path('employees/', views.EmployeeListView.as_view(), name='employee_list'),
+    path('employees/live-search/', views.employee_live_search, name='employee_live_search'),
     path('employees/create/', views.EmployeeCreateView.as_view(), name='employee_create'),
     path('employees/<int:pk>/', views.employee_detail, name='employee_detail'),
     path('employees/<int:pk>/toggle-status/', views.employee_toggle_status, name='employee_toggle_status'),
@@ -54,4 +55,12 @@ urlpatterns = [
     path('tickets/<int:pk>/comment/', views.add_ticket_comment, name='add_ticket_comment'),  # Add comment
     path('tickets/manage/', views.admin_tickets, name='admin_tickets'),  # Admin - All tickets
     path('tickets/manage/<int:pk>/update/', views.admin_update_ticket, name='admin_update_ticket'),  # Admin - Update ticket
+
+    # Password Reset URLs
+    path('password-reset-request/', views.password_reset_request, name='password_reset_request'),
+
+    # Admin Password Management URLs
+    path('password-requests/', views.password_reset_requests_list, name='password_reset_requests'),
+    path('password-requests/<int:request_id>/process/', views.process_password_reset_request, name='process_password_reset'),
+    path('employee/<int:employee_id>/change-password/', views.employee_change_password, name='employee_change_password'),
 ]

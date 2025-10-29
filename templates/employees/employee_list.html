@@ -25,31 +25,27 @@
             <small class="text-muted">Manage all employees in the system</small>
           </div>
           <div class="d-flex align-items-center gap-3">
-            <form method="get" class="d-flex">
-              <div class="input-group">
-                <input type="text" class="form-control" name="search" placeholder="Search employees..."
-                       value="{{ request.GET.search|default:'' }}">
-                <button class="btn btn-outline-primary" type="submit">
+            <div class="d-flex align-items-center gap-2">
+              <div class="position-relative" style="width: 260px;">
+                <span class="position-absolute top-50 translate-middle-y ms-3 text-muted">
                   <i class="icon-base bx bx-search"></i>
-                </button>
+                </span>
+                <input type="text" id="employee-search-input" class="form-control ps-5"
+                       placeholder="            Search employees..." value="{{ request.GET.search|default:'' }}"
+                       autocomplete="off">
+                <div id="employee-search-spinner" class="position-absolute end-0 top-50 translate-middle-y me-3 d-none">
+                  <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                </div>
               </div>
-            </form>
+              <div id="employee-search-feedback" class="text-muted small"></div>
+            </div>
             <a href="{% url 'employees:employee_create' %}" class="btn btn-primary">
               <i class="icon-base bx bx-plus me-1"></i>Add Employee
             </a>
           </div>
         </div>
-
-        {% if messages %}
-          {% for message in messages %}
-            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show mx-4 mt-3" role="alert">
-              {{ message }}
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-          {% endfor %}
-        {% endif %}
-
         <div class="card-body">
+          <div id="employee-table-wrapper">
           {% if employees %}
             <div class="table-responsive">
               <table class="table table-hover">
@@ -63,96 +59,8 @@
                     <th>Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {% for employee in employees %}
-                    <tr>
-                      <td>
-                        <div class="d-flex align-items-center">
-                          <div class="avatar avatar-sm me-3">
-                            {% if employee.profile_picture %}
-                              <img src="{{ employee.profile_picture.url }}" alt="Profile" class="rounded-circle">
-                            {% else %}
-                              <div class="avatar-initial bg-label-primary rounded-circle">
-                                {{ employee.name|first|upper }}
-                              </div>
-                            {% endif %}
-                          </div>
-                          <div>
-                            <h6 class="mb-0">{{ employee.full_name }}</h6>
-                            <small class="text-muted">{{ employee.email }}</small>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span class="fw-medium">{{ employee.contact }}</span>
-                        <br>
-                        <small class="text-muted">{{ employee.aadhar_card_number|slice:":4" }}****{{ employee.aadhar_card_number|slice:"-4:" }}</small>
-                      </td>
-                      <td>
-                        <span class="fw-medium">{{ employee.account_number|slice:":4" }}****{{ employee.account_number|slice:"-4:" }}</span>
-                        <br>
-                        <small class="text-muted">{{ employee.ifsc_code }}</small>
-                      </td>
-                      <td>
-                        <div class="d-flex flex-wrap gap-1">
-                          {% if employee.user.is_staff %}
-                            <span class="badge bg-label-primary">Staff</span>
-                          {% else %}
-                            <span class="badge bg-label-secondary">User</span>
-                          {% endif %}
-                          {% if employee.user.is_active %}
-                            <span class="badge bg-label-success">Active</span>
-                          {% else %}
-                            <span class="badge bg-label-danger">Inactive</span>
-                          {% endif %}
-                          {% if employee.face_registered %}
-                            <span class="badge bg-label-success" title="Face Recognition Registered">
-                              <i class="icon-base bx bx-face"></i>
-                            </span>
-                          {% endif %}
-                        </div>
-                      </td>
-                      <td>
-                        <span class="fw-medium">{{ employee.created_at|date:"M d, Y" }}</span>
-                        <br>
-                        <small class="text-muted">{{ employee.created_at|timesince }} ago</small>
-                      </td>
-                      <td>
-                        <div class="dropdown">
-                          <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                            <i class="icon-base bx bx-dots-vertical-rounded icon-24px"></i>
-                          </button>
-                          <div class="dropdown-menu">
-                            <a class="dropdown-item" href="{% url 'employees:employee_detail' employee.pk %}">
-                              <i class="icon-base bx bx-show me-1"></i> View Details
-                            </a>
-                            <a class="dropdown-item" href="{% url 'employees:employee_update' employee.pk %}">
-                              <i class="icon-base bx bx-edit-alt me-1"></i> Edit
-                            </a>
-                            {% if employee.user.is_active %}
-                              <form method="post" action="{% url 'employees:employee_toggle_status' employee.pk %}" class="d-inline">
-                                {% csrf_token %}
-                                <button type="submit" class="dropdown-item text-warning" onclick="return confirm('Are you sure you want to deactivate this employee? They will not be able to login.')">
-                                  <i class="icon-base bx bx-user-x me-1"></i> Deactivate
-                                </button>
-                              </form>
-                            {% else %}
-                              <form method="post" action="{% url 'employees:employee_toggle_status' employee.pk %}" class="d-inline">
-                                {% csrf_token %}
-                                <button type="submit" class="dropdown-item text-success" onclick="return confirm('Are you sure you want to activate this employee? They will be able to login again.')">
-                                  <i class="icon-base bx bx-user-check me-1"></i> Activate
-                                </button>
-                              </form>
-                            {% endif %}
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item text-danger" href="{% url 'employees:employee_delete' employee.pk %}">
-                              <i class="icon-base bx bx-trash me-1"></i> Delete
-                            </a>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  {% endfor %}
+                <tbody id="employee-table-body">
+                  {% include 'employees/partials/_employee_rows.html' with employees=employees %}
                 </tbody>
               </table>
             </div>
@@ -193,7 +101,7 @@
               <i class="icon-base bx bx-user-plus icon-48px text-muted mb-3"></i>
               <h5 class="text-muted mb-3">No employees found</h5>
               {% if request.GET.search %}
-                <p class="text-muted mb-4">No employees match your search criteria.</p>
+                <p class="text-muted mb-4">No employees match "<span id="search-query">{{ request.GET.search }}</span>"</p>
                 <a href="{% url 'employees:employee_list' %}" class="btn btn-outline-primary">Clear Search</a>
               {% else %}
                 <p class="text-muted mb-4">Start by adding your first employee to the system.</p>
@@ -210,25 +118,134 @@
 {% block page_js %}
   {{ block.super }}
   <script>
-    // Search functionality
     document.addEventListener('DOMContentLoaded', function() {
-      const searchInput = document.querySelector('input[name="search"]');
-      const searchForm = searchInput.closest('form');
+      const searchInput = document.getElementById('employee-search-input');
+      const tableBody = document.getElementById('employee-table-body');
+      const tableWrapper = document.getElementById('employee-table-wrapper');
+      const spinner = document.getElementById('employee-search-spinner');
+      const feedback = document.getElementById('employee-search-feedback');
+      let controller = null;
+      let debounceTimeout = null;
 
-      // Auto-submit search on Enter
-      searchInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          searchForm.submit();
+      function setLoading(isLoading) {
+        if (isLoading) {
+          spinner.classList.remove('d-none');
+        } else {
+          spinner.classList.add('d-none');
         }
-      });
+      }
 
-      // Clear search when input is empty
-      searchInput.addEventListener('input', function() {
-        if (this.value === '') {
-          searchForm.submit();
+      function renderRows(html) {
+        if (!tableBody) return;
+        tableBody.innerHTML = html;
+      }
+
+      function showEmptyState(query) {
+        tableWrapper.innerHTML = `
+          <div class="text-center py-5">
+            <i class="icon-base bx bx-user-plus icon-48px text-muted mb-3"></i>
+            <h5 class="text-muted mb-3">No employees found</h5>
+            <p class="text-muted mb-4">No employees match "${query}".</p>
+          </div>
+        `;
+      }
+
+      function hideFeedback() {
+        feedback.textContent = '';
+      }
+
+      function showFeedback(message, isError = false) {
+        feedback.textContent = message;
+        feedback.classList.toggle('text-danger', isError);
+        feedback.classList.toggle('text-muted', !isError);
+      }
+
+      async function fetchEmployees(query) {
+        if (controller) {
+          controller.abort();
         }
-      });
+        controller = new AbortController();
+
+        try {
+          setLoading(true);
+          hideFeedback();
+
+          const params = new URLSearchParams();
+          if (query) {
+            params.append('q', query);
+          }
+
+          const response = await fetch(`{% url 'employees:employee_live_search' %}?${params.toString()}`, {
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            signal: controller.signal
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch employees');
+          }
+
+          const data = await response.json();
+
+          if (data.success) {
+            if (data.html && data.html.trim() !== '') {
+              if (!tableBody) {
+                // Rebuild table if it was replaced by empty state
+                tableWrapper.innerHTML = `
+                  <div class="table-responsive">
+                    <table class="table table-hover">
+                      <thead>
+                        <tr>
+                          <th>Employee</th>
+                          <th>Contact</th>
+                          <th>Account</th>
+                          <th>Status</th>
+                          <th>Created</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="employee-table-body"></tbody>
+                    </table>
+                  </div>
+                `;
+              }
+
+              const newBody = document.getElementById('employee-table-body');
+              if (newBody) {
+                newBody.innerHTML = data.html;
+              }
+
+              if (data.count !== undefined) {
+                showFeedback(`${data.count} employee${data.count === 1 ? '' : 's'} found.`);
+              }
+            } else {
+              showEmptyState(query);
+            }
+          } else {
+            showFeedback(data.error || 'Unable to load employees', true);
+          }
+        } catch (error) {
+          if (error.name !== 'AbortError') {
+            console.error(error);
+            showFeedback('Error loading employees. Please try again.', true);
+          }
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      function handleInput() {
+        const query = searchInput.value.trim();
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(() => {
+          fetchEmployees(query);
+        }, 300);
+      }
+
+      if (searchInput) {
+        searchInput.addEventListener('input', handleInput);
+      }
     });
   </script>
 {% endblock %}

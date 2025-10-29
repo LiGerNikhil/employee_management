@@ -5,298 +5,255 @@
 {% block title %}My Attendance Logs | Employee Management System{% endblock %}
 
 {% block content %}
-  <div class="row">
-    <!-- Page Header -->
-    <div class="col-12 mb-6">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <h4 class="card-title mb-1">
-                <i class="bx bx-history me-2"></i>My Attendance Logs
-              </h4>
-              <p class="text-muted mb-0">Complete history of your check-ins and check-outs</p>
-            </div>
-            <div>
-              <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-outline-primary">
-                <i class="bx bx-arrow-back me-1"></i>Back to Dashboard
+  <div class="attendance-page">
+    <!-- Hero / Summary -->
+    <section class="attendance-hero card border-0 text-white overflow-hidden mb-5">
+      <div class="hero-bg-shape shape-1"></div>
+      <div class="hero-bg-shape shape-2"></div>
+      <div class="card-body">
+        <div class="hero-content">
+          <div class="hero-text">
+            <span class="hero-chip">
+              <i class="bx bx-pulse"></i>
+              Live Attendance Overview
+            </span>
+            <h2 class="hero-title text-white">Track your workday with confidence, {{ employee.name }}</h2>
+            <p class="hero-subtitle">Review your check-ins, monitor progress, and stay on top of your goals with a responsive, mobile-first layout.</p>
+            <div class="hero-actions">
+              {% if not attendance_records %}
+                <a href="{% url 'employees:check_in' %}" class="btn btn-light btn-lg hero-primary">
+                  <i class="bx bx-log-in me-1"></i>Check In Today
+                </a>
+              {% else %}
+                <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-light btn-lg hero-primary">
+                  <i class="bx bx-grid-alt me-1"></i>Back to Dashboard
+                </a>
+              {% endif %}
+              <a href="{% url 'employees:attendance_calendar' %}" class="btn btn-outline-light btn-lg">
+                <i class="bx bx-calendar me-1"></i>Calendar View
               </a>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="col-xl-3 col-md-6 col-12 mb-6">
-      <div class="card">
-        <div class="card-body text-center">
-          <div class="avatar mx-auto mb-3" style="width: 50px; height: 50px;">
-            <div class="avatar-initial bg-label-primary rounded">
-              <i class="bx bx-calendar icon-20px"></i>
+          <div class="hero-stats">
+            <div class="hero-stat-card">
+              <span class="label">Total Days</span>
+              <h3 class="value">{{ total_days }}</h3>
+              <span class="meta">Across all logs</span>
+            </div>
+            <div class="hero-stat-card">
+              <span class="label">Completed</span>
+              <h3 class="value text-success">{{ complete_days }}</h3>
+              <span class="meta">With checkout</span>
+            </div>
+            <div class="hero-stat-card">
+              <span class="label">Incomplete</span>
+              <h3 class="value text-warning">{{ incomplete_days }}</h3>
+              <span class="meta">Pending checkout</span>
+            </div>
+            <div class="hero-stat-card">
+              <span class="label">Total Hours</span>
+              <h3 class="value text-info">{{ total_hours }}h</h3>
+              <span class="meta">Logged this period</span>
             </div>
           </div>
-          <h4 class="mb-1">{{ total_days }}</h4>
-          <small class="text-muted">Total Days</small>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="col-xl-3 col-md-6 col-12 mb-6">
-      <div class="card">
-        <div class="card-body text-center">
-          <div class="avatar mx-auto mb-3" style="width: 50px; height: 50px;">
-            <div class="avatar-initial bg-label-success rounded">
-              <i class="bx bx-check-circle icon-20px"></i>
-            </div>
+    <!-- Filters + Quick Stats -->
+    <section class="filter-section card border-0 mb-5">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div>
+            <h4 class="section-title mb-1">Attendance Insights</h4>
+            <p class="section-subtitle mb-0 text-muted">Filter your history and jump back into recent activity.</p>
           </div>
-          <h4 class="mb-1">{{ complete_days }}</h4>
-          <small class="text-muted">Complete Days</small>
+          <button class="btn btn-outline-primary d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#attendanceFilters" aria-expanded="false" aria-controls="attendanceFilters" id="filterToggle">
+            <i class="bx bx-filter-alt me-1"></i>Show Filters
+          </button>
         </div>
-      </div>
-    </div>
 
-    <div class="col-xl-3 col-md-6 col-12 mb-6">
-      <div class="card">
-        <div class="card-body text-center">
-          <div class="avatar mx-auto mb-3" style="width: 50px; height: 50px;">
-            <div class="avatar-initial bg-label-warning rounded">
-              <i class="bx bx-error-circle icon-20px"></i>
+        <div class="collapse d-md-block" id="attendanceFilters">
+          <form method="get" class="filter-form mt-4">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-4">
+                <label class="form-label text-muted fw-semibold">Month</label>
+                <div class="input-wrapper">
+                  <i class="bx bx-calendar icon"></i>
+                  <select name="month" class="form-select">
+                    <option value="">All Months</option>
+                    <option value="1" {% if selected_month == "1" %}selected{% endif %}>January</option>
+                    <option value="2" {% if selected_month == "2" %}selected{% endif %}>February</option>
+                    <option value="3" {% if selected_month == "3" %}selected{% endif %}>March</option>
+                    <option value="4" {% if selected_month == "4" %}selected{% endif %}>April</option>
+                    <option value="5" {% if selected_month == "5" %}selected{% endif %}>May</option>
+                    <option value="6" {% if selected_month == "6" %}selected{% endif %}>June</option>
+                    <option value="7" {% if selected_month == "7" %}selected{% endif %}>July</option>
+                    <option value="8" {% if selected_month == "8" %}selected{% endif %}>August</option>
+                    <option value="9" {% if selected_month == "9" %}selected{% endif %}>September</option>
+                    <option value="10" {% if selected_month == "10" %}selected{% endif %}>October</option>
+                    <option value="11" {% if selected_month == "11" %}selected{% endif %}>November</option>
+                    <option value="12" {% if selected_month == "12" %}selected{% endif %}>December</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-muted fw-semibold">Year</label>
+                <div class="input-wrapper">
+                  <i class="bx bx-timer icon"></i>
+                  <select name="year" class="form-select">
+                    <option value="">All Years</option>
+                    {% for year_date in available_years %}
+                      <option value="{{ year_date.year }}" {% if selected_year == year_date.year|stringformat:"s" %}selected{% endif %}>{{ year_date.year }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                  <i class="bx bx-filter-alt me-1"></i>Apply Filters
+                </button>
+                <a href="{% url 'employees:my_attendance_logs' %}" class="btn btn-outline-secondary">
+                  <i class="bx bx-reset"></i>
+                </a>
+              </div>
             </div>
-          </div>
-          <h4 class="mb-1">{{ incomplete_days }}</h4>
-          <small class="text-muted">Incomplete Days</small>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6 col-12 mb-6">
-      <div class="card">
-        <div class="card-body text-center">
-          <div class="avatar mx-auto mb-3" style="width: 50px; height: 50px;">
-            <div class="avatar-initial bg-label-info rounded">
-              <i class="bx bx-time icon-20px"></i>
-            </div>
-          </div>
-          <h4 class="mb-1">{{ total_hours }}h</h4>
-          <small class="text-muted">Total Hours</small>
-        </div>
-      </div>
-    </div>
-
-    <!-- Filters and Table -->
-    <div class="col-12 mb-6">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="card-title m-0">Attendance Records</h5>
-          
-          <!-- Filter Form -->
-          <form method="get" class="d-flex gap-2">
-            <select name="month" class="form-select form-select-sm" style="width: auto;">
-              <option value="">All Months</option>
-              <option value="1" {% if selected_month == "1" %}selected{% endif %}>January</option>
-              <option value="2" {% if selected_month == "2" %}selected{% endif %}>February</option>
-              <option value="3" {% if selected_month == "3" %}selected{% endif %}>March</option>
-              <option value="4" {% if selected_month == "4" %}selected{% endif %}>April</option>
-              <option value="5" {% if selected_month == "5" %}selected{% endif %}>May</option>
-              <option value="6" {% if selected_month == "6" %}selected{% endif %}>June</option>
-              <option value="7" {% if selected_month == "7" %}selected{% endif %}>July</option>
-              <option value="8" {% if selected_month == "8" %}selected{% endif %}>August</option>
-              <option value="9" {% if selected_month == "9" %}selected{% endif %}>September</option>
-              <option value="10" {% if selected_month == "10" %}selected{% endif %}>October</option>
-              <option value="11" {% if selected_month == "11" %}selected{% endif %}>November</option>
-              <option value="12" {% if selected_month == "12" %}selected{% endif %}>December</option>
-            </select>
-            
-            <select name="year" class="form-select form-select-sm" style="width: auto;">
-              <option value="">All Years</option>
-              {% for year_date in available_years %}
-                <option value="{{ year_date.year }}" {% if selected_year == year_date.year|stringformat:"s" %}selected{% endif %}>
-                  {{ year_date.year }}
-                </option>
-              {% endfor %}
-            </select>
-            
-            <button type="submit" class="btn btn-sm btn-primary">
-              <i class="bx bx-filter-alt"></i> Filter
-            </button>
-            
-            <a href="{% url 'employees:my_attendance_logs' %}" class="btn btn-sm btn-outline-secondary">
-              <i class="bx bx-reset"></i> Reset
-            </a>
           </form>
         </div>
+      </div>
+    </section>
 
+    <!-- Attendance Records -->
+    <section class="records-section mb-5">
+      <div class="card border-0">
+        <div class="card-header border-0 bg-transparent d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <div>
+            <h4 class="section-title mb-1">Attendance Records</h4>
+            <p class="section-subtitle mb-0 text-muted">Detailed log of your check-ins and check-outs.</p>
+          </div>
+          <div class="record-badges d-none d-md-flex gap-2">
+            <span class="badge rounded-pill bg-label-success">Complete: {{ complete_days }}</span>
+            <span class="badge rounded-pill bg-label-warning">Incomplete: {{ incomplete_days }}</span>
+            <span class="badge rounded-pill bg-label-primary">Total: {{ total_days }}</span>
+          </div>
+        </div>
         <div class="card-body">
           {% if attendance_records %}
-            <div class="table-responsive">
-              <table class="table table-hover table-striped">
-                <thead class="table-light">
+            <!-- Desktop Table -->
+            <div class="table-responsive d-none d-md-block">
+              <table class="table align-middle modern-table">
+                <thead>
                   <tr>
                     <th>#</th>
                     <th>Date</th>
-                    <th>Day</th>
-                    <th><i class="bx bx-log-in me-1"></i>Check-In</th>
-                    <th><i class="bx bx-log-out me-1"></i>Check-Out</th>
+                    <th>Check-In</th>
+                    <th>Check-Out</th>
                     <th>Duration</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for attendance in attendance_records %}
                     <tr>
-                      <td>{{ forloop.counter|add:page_obj.start_index|add:"-1" }}</td>
-                      <td class="fw-medium">
-                        {{ attendance.date|date:"d M Y" }}
-                        {% if attendance.date == current_date %}
-                          <span class="badge bg-primary ms-1">Today</span>
-                        {% endif %}
+                      <td class="text-muted">{{ forloop.counter0|add:page_obj.start_index }}</td>
+                      <td>
+                        <div class="table-date">
+                          <strong>{{ attendance.date|date:"d M Y" }}</strong>
+                          <small class="text-muted">{{ attendance.date|date:"l" }}</small>
+                          {% if attendance.date == current_date %}
+                            <span class="badge bg-primary ms-2">Today</span>
+                          {% endif %}
+                        </div>
                       </td>
-                      <td>{{ attendance.date|date:"l" }}</td>
                       <td>
                         <span class="badge bg-label-success">
-                          <i class="bx bx-time-five"></i> {{ attendance.check_in_time|date:"H:i:s" }}
+                          <i class="bx bx-log-in me-1"></i>{{ attendance.check_in_time|date:"H:i" }}
                         </span>
                       </td>
                       <td>
                         {% if attendance.check_out_time %}
                           <span class="badge bg-label-danger">
-                            <i class="bx bx-time-five"></i> {{ attendance.check_out_time|date:"H:i:s" }}
+                            <i class="bx bx-log-out me-1"></i>{{ attendance.check_out_time|date:"H:i" }}
                           </span>
                         {% else %}
-                          <span class="badge bg-label-secondary">
-                            <i class="bx bx-minus"></i> Not checked out
-                          </span>
+                          <span class="badge bg-label-secondary">Pending</span>
                         {% endif %}
                       </td>
                       <td>
                         {% if attendance.check_out_time %}
-                          <span class="text-primary fw-medium">
-                            <i class="bx bx-time"></i> {{ attendance.duration }}
-                          </span>
+                          <span class="text-primary fw-semibold">{{ attendance.duration|default:"-" }}</span>
                         {% else %}
                           <span class="text-muted">-</span>
                         {% endif %}
                       </td>
                       <td>
                         {% if attendance.check_out_time %}
-                          <span class="badge bg-success">
-                            <i class="bx bx-check"></i> Complete
-                          </span>
+                          <span class="status-chip complete">Complete</span>
                         {% else %}
-                          <span class="badge bg-warning">
-                            <i class="bx bx-error"></i> Incomplete
-                          </span>
+                          <span class="status-chip incomplete">Incomplete</span>
                         {% endif %}
                       </td>
-                      <td>
-                        <button type="button" class="btn btn-sm btn-outline-info" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#detailModal{{ attendance.id }}">
-                          <i class="bx bx-show"></i> View
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#detailModal{{ attendance.id }}">
+                          View Details
                         </button>
                       </td>
                     </tr>
-
-                    <!-- Detail Modal -->
-                    <div class="modal fade" id="detailModal{{ attendance.id }}" tabindex="-1" aria-hidden="true">
-                      <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                          <div class="modal-header">
-                            <h5 class="modal-title">
-                              <i class="bx bx-calendar-event me-2"></i>
-                              Attendance Details - {{ attendance.date|date:"d M Y" }}
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                          </div>
-                          <div class="modal-body">
-                            <div class="row g-3">
-                              <div class="col-12">
-                                <div class="d-flex align-items-center mb-3">
-                                  <div class="avatar me-3">
-                                    <div class="avatar-initial bg-label-primary rounded">
-                                      <i class="bx bx-calendar"></i>
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <h6 class="mb-0">{{ attendance.date|date:"l, d F Y" }}</h6>
-                                    <small class="text-muted">{{ attendance.date|date:"d/m/Y" }}</small>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div class="col-md-6">
-                                <div class="border rounded p-3">
-                                  <div class="d-flex align-items-center mb-2">
-                                    <i class="bx bx-log-in text-success me-2 fs-5"></i>
-                                    <h6 class="mb-0">Check-In</h6>
-                                  </div>
-                                  <p class="mb-1 fw-medium">{{ attendance.check_in_time|date:"H:i:s" }}</p>
-                                  <small class="text-muted">{{ attendance.check_in_time|date:"d M Y" }}</small>
-                                  {% if attendance.check_in_photo %}
-                                    <div class="mt-2">
-                                      <img src="{{ attendance.check_in_photo.url }}" 
-                                           alt="Check-in photo" 
-                                           class="img-fluid rounded"
-                                           style="max-height: 150px;">
-                                    </div>
-                                  {% endif %}
-                                </div>
-                              </div>
-
-                              <div class="col-md-6">
-                                <div class="border rounded p-3">
-                                  <div class="d-flex align-items-center mb-2">
-                                    <i class="bx bx-log-out text-danger me-2 fs-5"></i>
-                                    <h6 class="mb-0">Check-Out</h6>
-                                  </div>
-                                  {% if attendance.check_out_time %}
-                                    <p class="mb-1 fw-medium">{{ attendance.check_out_time|date:"H:i:s" }}</p>
-                                    <small class="text-muted">{{ attendance.check_out_time|date:"d M Y" }}</small>
-                                    {% if attendance.check_out_photo %}
-                                      <div class="mt-2">
-                                        <img src="{{ attendance.check_out_photo.url }}" 
-                                             alt="Check-out photo" 
-                                             class="img-fluid rounded"
-                                             style="max-height: 150px;">
-                                      </div>
-                                    {% endif %}
-                                  {% else %}
-                                    <p class="text-muted mb-0">Not checked out yet</p>
-                                  {% endif %}
-                                </div>
-                              </div>
-
-                              {% if attendance.check_out_time %}
-                                <div class="col-12">
-                                  <div class="alert alert-info mb-0">
-                                    <div class="d-flex align-items-center">
-                                      <i class="bx bx-time fs-4 me-2"></i>
-                                      <div>
-                                        <strong>Total Duration:</strong> {{ attendance.duration }}
-                                        <small class="d-block text-muted">{{ attendance.duration_hours }} hours</small>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              {% endif %}
-                            </div>
-                          </div>
-                          <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                   {% endfor %}
                 </tbody>
               </table>
             </div>
 
-            <!-- Pagination -->
+            <!-- Mobile Cards -->
+            <div class="attendance-card-grid d-md-none">
+              {% for attendance in attendance_records %}
+                <div class="attendance-entry-card slide-up" style="--delay:{{ forloop.counter0 }}00ms">
+                  <div class="entry-header">
+                    <div>
+                      <p class="date">{{ attendance.date|date:"d M Y" }}</p>
+                      <span class="day">{{ attendance.date|date:"l" }}</span>
+                    </div>
+                    <div class="status {% if attendance.check_out_time %}complete{% else %}incomplete{% endif %}">
+                      <span class="dot"></span>
+                      {% if attendance.check_out_time %}Complete{% else %}Incomplete{% endif %}
+                    </div>
+                  </div>
+                  <div class="entry-body">
+                    <div class="time-block">
+                      <p class="label">Check-In</p>
+                      <h6>{{ attendance.check_in_time|date:"H:i" }}</h6>
+                      <small>{{ attendance.check_in_time|date:"d M" }}</small>
+                    </div>
+                    <div class="time-block">
+                      <p class="label">Check-Out</p>
+                      {% if attendance.check_out_time %}
+                        <h6>{{ attendance.check_out_time|date:"H:i" }}</h6>
+                        <small>{{ attendance.check_out_time|date:"d M" }}</small>
+                      {% else %}
+                        <span class="text-muted">Pending</span>
+                      {% endif %}
+                    </div>
+                    <div class="duration-block">
+                      <p class="label">Duration</p>
+                      {% if attendance.check_out_time %}
+                        <span class="duration">{{ attendance.duration|default:"-" }}</span>
+                      {% else %}
+                        <span class="duration text-muted">-</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="entry-footer">
+                    <button type="button" class="btn btn-soft-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#detailModal{{ attendance.id }}">
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+
             {% if page_obj.has_other_pages %}
-              <nav aria-label="Page navigation" class="mt-4">
+              <nav aria-label="Attendance pagination" class="mt-4">
                 <ul class="pagination justify-content-center">
                   {% if page_obj.has_previous %}
                     <li class="page-item">
@@ -310,13 +267,7 @@
                       </a>
                     </li>
                   {% endif %}
-
-                  <li class="page-item active">
-                    <span class="page-link">
-                      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                    </span>
-                  </li>
-
+                  <li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
                   {% if page_obj.has_next %}
                     <li class="page-item">
                       <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}">
@@ -332,27 +283,23 @@
                 </ul>
               </nav>
             {% endif %}
-
           {% else %}
-            <!-- Empty State -->
-            <div class="text-center py-5">
-              <div class="avatar avatar-xl mx-auto mb-3">
-                <div class="avatar-initial bg-label-secondary rounded">
-                  <i class="bx bx-calendar-x display-4"></i>
-                </div>
+            <div class="empty-state text-center py-5">
+              <div class="icon-wrapper mb-3">
+                <i class="bx bx-calendar-x"></i>
               </div>
-              <h5 class="mb-2">No Attendance Records Found</h5>
+              <h5>No Attendance Records Found</h5>
               <p class="text-muted mb-4">
                 {% if selected_month or selected_year %}
-                  No records found for the selected filter. Try changing your filter criteria.
+                  No data matches your filters. Try adjusting the month or year.
                 {% else %}
-                  You haven't checked in yet. Start by checking in for today!
+                  You haven't started logging attendance yet. Begin with a new check-in.
                 {% endif %}
               </p>
-              <div class="d-flex justify-content-center gap-2">
+              <div class="d-flex flex-wrap justify-content-center gap-2">
                 {% if selected_month or selected_year %}
                   <a href="{% url 'employees:my_attendance_logs' %}" class="btn btn-outline-secondary">
-                    <i class="bx bx-reset me-1"></i>Clear Filters
+                    <i class="bx bx-reset me-1"></i>Reset Filters
                   </a>
                 {% endif %}
                 <a href="{% url 'employees:check_in' %}" class="btn btn-primary">
@@ -363,6 +310,602 @@
           {% endif %}
         </div>
       </div>
-    </div>
+    </section>
   </div>
+
+  <!-- Detail Modals -->
+  {% for attendance in attendance_records %}
+    <div class="modal fade attendance-detail-modal" id="detailModal{{ attendance.id }}" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header border-0">
+            <div>
+              <span class="modal-chip">
+                <i class="bx bx-calendar-event"></i>
+                Detailed Breakdown
+              </span>
+              <h5 class="modal-title mb-0">{{ attendance.date|date:"l, d F Y" }}</h5>
+              <small class="text-muted">Entry logged on {{ attendance.date|date:"d/m/Y" }}</small>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-4">
+              <div class="col-md-6">
+                <div class="modal-info-card">
+                  <div class="modal-info-header">
+                    <span class="icon bg-success text-white">
+                      <i class="bx bx-log-in"></i>
+                    </span>
+                    <div>
+                      <h6 class="mb-0">Check-In</h6>
+                      <small class="text-muted">{{ attendance.check_in_time|date:"d M Y" }}</small>
+                    </div>
+                  </div>
+                  <p class="time-display">{{ attendance.check_in_time|date:"H:i:s" }}</p>
+                  {% if attendance.check_in_photo %}
+                    <div class="photo-preview">
+                      <img src="{{ attendance.check_in_photo.url }}" alt="Check-in photo" class="img-fluid rounded" />
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="modal-info-card">
+                  <div class="modal-info-header">
+                    <span class="icon bg-danger text-white">
+                      <i class="bx bx-log-out"></i>
+                    </span>
+                    <div>
+                      <h6 class="mb-0">Check-Out</h6>
+                      {% if attendance.check_out_time %}
+                        <small class="text-muted">{{ attendance.check_out_time|date:"d M Y" }}</small>
+                      {% endif %}
+                    </div>
+                  </div>
+                  {% if attendance.check_out_time %}
+                    <p class="time-display">{{ attendance.check_out_time|date:"H:i:s" }}</p>
+                    {% if attendance.check_out_photo %}
+                      <div class="photo-preview">
+                        <img src="{{ attendance.check_out_photo.url }}" alt="Check-out photo" class="img-fluid rounded" />
+                      </div>
+                    {% endif %}
+                  {% else %}
+                    <div class="empty-placeholder">
+                      <i class="bx bx-timer"></i>
+                      <span>Check-out pending</span>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="modal-summary">
+                  <div class="summary-item">
+                    <span class="label">Duration</span>
+                    <span class="value">{% if attendance.check_out_time %}{{ attendance.duration|default:"-" }}{% else %}-{% endif %}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="label">Hours Count</span>
+                    <span class="value">{% if attendance.check_out_time %}{{ attendance.duration_hours }}{% else %}-{% endif %}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="label">Status</span>
+                    <span class="value">
+                      {% if attendance.check_out_time %}
+                        <span class="status-chip complete">Complete</span>
+                      {% else %}
+                        <span class="status-chip incomplete">Incomplete</span>
+                      {% endif %}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+{% endblock %}
+
+{% block page_css %}
+<style>
+.attendance-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.attendance-hero {
+  background: linear-gradient(135deg, #5b6cff 0%, #7f3dff 100%);
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.65rem;
+  box-shadow: 0 20px 40px rgba(94, 62, 255, 0.3);
+}
+
+.attendance-hero .card-body {
+  padding: 2.5rem;
+}
+
+.hero-bg-shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.6;
+  filter: blur(60px);
+  animation: float 12s infinite ease-in-out;
+}
+
+.hero-bg-shape.shape-1 {
+  width: 220px;
+  height: 220px;
+  background: rgba(255, 255, 255, 0.3);
+  top: -60px;
+  right: -40px;
+}
+
+.hero-bg-shape.shape-2 {
+  width: 180px;
+  height: 180px;
+  background: rgba(255, 193, 7, 0.35);
+  bottom: -50px;
+  left: -40px;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+.hero-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.hero-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 1rem 0 0.75rem;
+}
+
+.hero-subtitle {
+  opacity: 0.85;
+  max-width: 520px;
+  line-height: 1.6;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.hero-primary {
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.25);
+}
+
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.hero-stat-card {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.hero-stat-card .label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  opacity: 0.8;
+  letter-spacing: 0.08em;
+}
+
+.hero-stat-card .value {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.hero-stat-card .meta {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.filter-section {
+  border-radius: 0.5rem;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.filter-section .card-body {
+  padding: 2rem;
+}
+
+.section-title {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.section-subtitle {
+  font-size: 0.95rem;
+}
+
+.filter-form .input-wrapper {
+  position: relative;
+}
+
+.filter-form .input-wrapper .icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.25rem;
+  color: #6b7280;
+}
+
+.filter-form .form-select {
+  padding-left: 2.75rem;
+  border-radius: 0.45rem;
+  border: 1px solid #d1d5db;
+  transition: all 0.2s ease;
+}
+
+.filter-form .form-select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.15);
+}
+
+.records-section .card {
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
+}
+
+.modern-table thead {
+  background: #f8fafc;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.modern-table th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  font-weight: 700;
+  border: 0;
+}
+
+.modern-table td {
+  vertical-align: middle;
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.table-date strong {
+  display: block;
+  font-weight: 600;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-chip.complete {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.status-chip.incomplete {
+  background: rgba(250, 204, 21, 0.2);
+  color: #92400e;
+}
+
+.btn-soft-primary {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+  border-radius: 0.45rem;
+  border: none;
+  transition: all 0.25s ease;
+}
+
+.btn-soft-primary:hover {
+  background: rgba(99, 102, 241, 0.2);
+  color: #312e81;
+}
+
+.attendance-card-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.attendance-entry-card {
+  background: #fff;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  animation: slideUp 0.6s ease forwards;
+  animation-delay: var(--delay, 0ms);
+  opacity: 0;
+}
+
+@keyframes slideUp {
+  0% { opacity: 0; transform: translateY(25px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.attendance-entry-card .entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.attendance-entry-card .date {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.attendance-entry-card .day {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.attendance-entry-card .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.attendance-entry-card .status .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.attendance-entry-card .status.complete {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.attendance-entry-card .status.complete .dot { background: #22c55e; }
+
+.attendance-entry-card .status.incomplete {
+  background: rgba(250, 204, 21, 0.2);
+  color: #92400e;
+}
+
+.attendance-entry-card .status.incomplete .dot { background: #f59e0b; }
+
+.entry-body {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.entry-body .label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+.entry-body h6 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.entry-body small {
+  color: #94a3b8;
+}
+
+.duration {
+  font-weight: 700;
+  color: #4338ca;
+}
+
+.entry-footer {
+  margin-top: 1.5rem;
+}
+
+.empty-state .icon-wrapper {
+  width: 80px;
+  height: 80px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.attendance-detail-modal .modal-content {
+  border-radius: 0.5rem;
+  border: none;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.15);
+}
+
+.attendance-detail-modal .modal-body {
+  padding-top: 0;
+}
+
+.modal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+  border-radius: 0.45rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.modal-info-card {
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 0.45rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.95), #fff);
+}
+
+.modal-info-header {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.modal-info-header .icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.time-display {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.empty-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.empty-placeholder i {
+  font-size: 2rem;
+}
+
+.modal-summary {
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 0.45rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.summary-item {
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.summary-item .label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+}
+
+.summary-item .value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.photo-preview img {
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .attendance-hero .card-body { padding: 2rem; }
+  .hero-title { font-size: 1.75rem; }
+}
+
+@media (max-width: 768px) {
+  .attendance-hero .card-body { padding: 1.75rem; }
+  .hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .entry-body { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .modal-dialog { margin: 1rem; }
+  .modal-info-card { padding: 1.25rem; }
+}
+
+@media (max-width: 576px) {
+  .attendance-hero .card-body { padding: 1.5rem; }
+  .hero-title { font-size: 1.5rem; }
+  .hero-actions { flex-direction: column; align-items: stretch; }
+  .hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+  .entry-body { grid-template-columns: 1fr; }
+  .attendance-entry-card { padding: 1.25rem; }
+  .filter-section .card-body { padding: 1.5rem; }
+  .filter-form .col-md-4 { width: 100%; }
+  .filter-form .form-select { padding-left: 2.5rem; }
+  .modal-summary { flex-direction: column; }
+}
+
+@media (max-width: 400px) {
+  .hero-title { font-size: 1.35rem; }
+  .hero-subtitle { font-size: 0.85rem; }
+  .hero-stats { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block page_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var filterToggle = document.getElementById('filterToggle');
+    var filterCollapse = document.getElementById('attendanceFilters');
+    if (filterToggle && filterCollapse) {
+      filterCollapse.addEventListener('shown.bs.collapse', function () {
+        filterToggle.innerHTML = '<i class="bx bx-x me-1"></i>Hide Filters';
+      });
+      filterCollapse.addEventListener('hidden.bs.collapse', function () {
+        filterToggle.innerHTML = '<i class="bx bx-filter-alt me-1"></i>Show Filters';
+      });
+    }
+  });
+</script>
 {% endblock %}

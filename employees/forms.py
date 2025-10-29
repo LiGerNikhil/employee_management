@@ -32,7 +32,7 @@ class EmployeeForm(forms.ModelForm):
             'aadhar_card_number', 'account_number', 'ifsc_code', 'pan_card',
             'current_address', 'permanent_address',
             'relative_name', 'relative_contact', 'relation_with_employee',
-            'profile_picture', 'password'
+            'password'
         ]
         widgets = {
             'name': forms.TextInput(attrs={
@@ -67,9 +67,6 @@ class EmployeeForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Enter PAN card number'
             }),
-            'profile_picture': forms.FileInput(attrs={
-                'class': 'form-control'
-            }),
         }
         help_texts = {
             'name': 'Employee\'s first name',
@@ -85,7 +82,6 @@ class EmployeeForm(forms.ModelForm):
             'relative_name': 'Name of a relative for emergency contact',
             'relative_contact': 'Contact number of the relative',
             'relation_with_employee': 'Relationship with the employee',
-            'profile_picture': 'Upload profile picture (optional)',
         }
 
     def clean_email(self):
@@ -172,8 +168,7 @@ class EmployeeUpdateForm(forms.ModelForm):
             'name', 'full_name', 'email', 'contact',
             'aadhar_card_number', 'account_number', 'ifsc_code', 'pan_card',
             'current_address', 'permanent_address',
-            'relative_name', 'relative_contact', 'relation_with_employee',
-            'profile_picture'
+            'relative_name', 'relative_contact', 'relation_with_employee'
         ]
         widgets = {
             'name': forms.TextInput(attrs={
@@ -208,9 +203,6 @@ class EmployeeUpdateForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Enter PAN card number'
             }),
-            'profile_picture': forms.FileInput(attrs={
-                'class': 'form-control'
-            }),
         }
         help_texts = {
             'name': 'Employee\'s first name',
@@ -226,7 +218,6 @@ class EmployeeUpdateForm(forms.ModelForm):
             'relative_name': 'Name of a relative for emergency contact',
             'relative_contact': 'Contact number of the relative',
             'relation_with_employee': 'Relationship with the employee',
-            'profile_picture': 'Upload new profile picture (optional)',
         }
 
     def clean_email(self):

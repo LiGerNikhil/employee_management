@@ -84,29 +84,6 @@
       </div>
     </div>
 
-    <!-- Recent Failed Attempts Alert -->
-    {% if recent_failures %}
-      <div class="col-12 mb-6">
-        <div class="alert alert-warning alert-dismissible" role="alert">
-          <h6 class="alert-heading mb-2">
-            <i class="bx bx-error-circle me-1"></i>Recent Failed Attempts (Security Alert)
-          </h6>
-          <div class="row">
-            {% for failure in recent_failures|slice:":5" %}
-              <div class="col-md-6 mb-2">
-                <small>
-                  <strong>{{ failure.employee.name }}</strong> - {{ failure.get_action_display }}
-                  <br>
-                  <span class="text-muted">{{ failure.timestamp|date:"d M Y H:i" }} - {{ failure.get_failure_reason_display }}</span>
-                </small>
-              </div>
-            {% endfor %}
-          </div>
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-      </div>
-    {% endif %}
-
     <!-- Filters and Table -->
     <div class="col-12 mb-6">
       <div class="card">

@@ -111,12 +111,14 @@
       </a>
     </li>
 
-    <li class="menu-item">
-      <a href="http://127.0.0.1:8000/" class="menu-link">
-        <i class="menu-icon icon-base bx bx-home"></i>
-        <div class="text-truncate">Back to Main Site</div>
+    {% if not user.is_superuser %}
+    <li class="menu-item {% if 'face/register' in request.path %}active{% endif %}">
+      <a href="{% url 'employees:face_register' %}" class="menu-link">
+        <i class="menu-icon icon-base bx bx-face"></i>
+        <div class="text-truncate">Face Registration</div>
       </a>
     </li>
+    {% endif %}
 
   </ul>
 

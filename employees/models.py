@@ -150,6 +150,15 @@ class Employee(models.Model):
             self.face_registered = False
             self.face_registered_at = None
 
+    @property
+    def has_registered_face(self):
+        """Return True only when face data and profile picture are present."""
+        return bool(
+            self.face_registered and
+            self.face_encoding and
+            self.profile_picture
+        )
+
 
 class Attendance(models.Model):
     """Attendance model for tracking employee check-ins"""
@@ -212,6 +221,10 @@ class Attendance(models.Model):
         null=True,
         help_text="Longitude of check-out location"
     )
+    half_day = models.BooleanField(
+        default=False,
+        help_text="Whether the attendance is marked as half-day due to short worked hours"
+    )
 
     class Meta:
         ordering = ['-check_in_time']
@@ -249,6 +262,21 @@ class Attendance(models.Model):
         delta = self.check_out_time - self.check_in_time
         hours = delta.total_seconds() / 3600
         return round(hours, 2)
+
+    @property
+    def is_half_day(self):
+        """Return True when the worked hours are below the half-day threshold."""
+        HALF_DAY_THRESHOLD_HOURS = 4.5
+
+        if self.half_day:
+            return True
+
+        if not self.check_out_time:
+            return False
+
+        delta = self.check_out_time - self.check_in_time
+        hours = delta.total_seconds() / 3600
+        return hours < HALF_DAY_THRESHOLD_HOURS
 
     @classmethod
     def has_checked_in_today(cls, employee):
