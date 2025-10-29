@@ -40,6 +40,8 @@ urlpatterns = [
     path('attendance/', views.AttendanceListView.as_view(), name='attendance_list'),  # Admin only
     path('my-attendance/', views.my_attendance_logs, name='my_attendance_logs'),  # Employee only
     path('attendance-logs/', views.admin_attendance_logs, name='admin_attendance_logs'),  # Admin only - All activity logs
+    path('attendance/calendar/', views.employee_attendance_calendar, name='attendance_calendar'),  # Employee - Calendar view
+    path('attendance/admin-calendar/', views.admin_attendance_calendar, name='admin_attendance_calendar'),  # Admin - Calendar view
 
     # Face Recognition URLs
     path('face/register/', views.face_registration, name='face_register'),

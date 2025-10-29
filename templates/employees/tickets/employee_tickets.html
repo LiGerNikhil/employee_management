@@ -10,15 +10,15 @@
     <div class="col-12 mb-6">
       <div class="card bg-gradient-primary text-white">
         <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+            <div class="flex-grow-1 text-center text-md-start">
               <h4 class="card-title text-white mb-1">
                 <i class="bx bx-support me-2"></i>My Support Tickets
               </h4>
               <p class="mb-0 opacity-75">Track and manage your support requests</p>
             </div>
-            <div>
-              <a href="{% url 'employees:create_ticket' %}" class="btn btn-light">
+            <div class="flex-shrink-0 w-50 w-md-auto d-flex justify-content-center justify-content-md-end">
+              <a href="{% url 'employees:create_ticket' %}" class="btn btn-light btn-create-ticket">
                 <i class="bx bx-plus me-1"></i>Create New Ticket
               </a>
             </div>
@@ -87,44 +87,116 @@
     <!-- Filters and Tickets -->
     <div class="col-12 mb-6">
       <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="card-title m-0">My Tickets</h5>
-          
-          <!-- Filter Form -->
-          <form method="get" class="d-flex gap-2">
-            <select name="status" class="form-select form-select-sm" style="width: auto;">
-              <option value="">All Status</option>
-              {% for status_code, status_label in status_choices %}
-                <option value="{{ status_code }}" {% if selected_status == status_code %}selected{% endif %}>
-                  {{ status_label }}
-                </option>
-              {% endfor %}
-            </select>
+        <div class="card-header">
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+            <h5 class="card-title m-0">My Tickets</h5>
             
-            <select name="priority" class="form-select form-select-sm" style="width: auto;">
-              <option value="">All Priority</option>
-              {% for priority_code, priority_label in priority_choices %}
-                <option value="{{ priority_code }}" {% if selected_priority == priority_code %}selected{% endif %}>
-                  {{ priority_label }}
-                </option>
-              {% endfor %}
-            </select>
-            
-            <button type="submit" class="btn btn-sm btn-primary">
-              <i class="bx bx-filter-alt"></i> Filter
-            </button>
-            
-            {% if selected_status or selected_priority %}
-              <a href="{% url 'employees:employee_tickets' %}" class="btn btn-sm btn-outline-secondary">
-                <i class="bx bx-reset"></i> Reset
-              </a>
-            {% endif %}
-          </form>
+            <!-- Filter Form -->
+            <form method="get" class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
+              <select name="status" class="form-select form-select-sm">
+                <option value="">All Status</option>
+                {% for status_code, status_label in status_choices %}
+                  <option value="{{ status_code }}" {% if selected_status == status_code %}selected{% endif %}>
+                    {{ status_label }}
+                  </option>
+                {% endfor %}
+              </select>
+              
+              <select name="priority" class="form-select form-select-sm">
+                <option value="">All Priority</option>
+                {% for priority_code, priority_label in priority_choices %}
+                  <option value="{{ priority_code }}" {% if selected_priority == priority_code %}selected{% endif %}>
+                    {{ priority_label }}
+                  </option>
+                {% endfor %}
+              </select>
+              
+              <button type="submit" class="btn btn-sm btn-primary">
+                <i class="bx bx-filter-alt"></i> Filter
+              </button>
+              
+              {% if selected_status or selected_priority %}
+                <a href="{% url 'employees:employee_tickets' %}" class="btn btn-sm btn-outline-secondary">
+                  <i class="bx bx-reset"></i> Reset
+                </a>
+              {% endif %}
+            </form>
+          </div>
         </div>
 
         <div class="card-body">
           {% if tickets %}
-            <div class="table-responsive">
+            <!-- Mobile Card Slider View (visible on mobile only) -->
+            <div class="mobile-ticket-slider d-md-none">
+              <div class="ticket-cards-container">
+                {% for ticket in tickets %}
+                  <div class="ticket-card">
+                    <div class="ticket-card-header">
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                          <h6 class="mb-1">
+                            <strong class="text-primary">{{ ticket.ticket_number }}</strong>
+                            {% if ticket.updated_at|date:"Y-m-d H:i" != ticket.created_at|date:"Y-m-d H:i" %}
+                              <span class="badge bg-info ms-1">
+                                <i class="bx bx-bell"></i> Updated
+                              </span>
+                            {% endif %}
+                          </h6>
+                          <small class="text-muted">
+                            <i class="bx bx-time-five"></i> {{ ticket.created_at|date:"d M Y, H:i" }}
+                          </small>
+                        </div>
+                        <span class="badge bg-{{ ticket.priority_color }}">
+                          {{ ticket.get_priority_display }}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div class="ticket-card-body">
+                      <div class="mb-2">
+                        <i class="bx {{ ticket.category_icon }} me-1 text-primary"></i>
+                        <strong>{{ ticket.subject }}</strong>
+                      </div>
+                      
+                      <div class="d-flex gap-2 mb-3">
+                        <span class="badge bg-label-info">
+                          <i class="bx bx-category"></i> {{ ticket.get_category_display }}
+                        </span>
+                        <span class="badge bg-{{ ticket.status_color }}">
+                          <i class="bx bx-circle"></i> {{ ticket.get_status_display }}
+                        </span>
+                      </div>
+                      
+                      {% if ticket.description %}
+                        <p class="text-muted small mb-3">
+                          {{ ticket.description|truncatewords:15 }}
+                        </p>
+                      {% endif %}
+                    </div>
+                    
+                    <div class="ticket-card-footer">
+                      <a href="{% url 'employees:ticket_detail' ticket.pk %}" class="btn btn-sm btn-primary w-100">
+                        <i class="bx bx-show me-1"></i> View Details
+                      </a>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+              
+              <!-- Slider Navigation -->
+              <div class="slider-navigation mt-3">
+                <button class="slider-btn slider-prev" id="sliderPrev">
+                  <i class="bx bx-chevron-left"></i>
+                </button>
+                <span class="slider-indicator" id="sliderIndicator">1 / {{ tickets|length }}</span>
+                <button class="slider-btn slider-next" id="sliderNext">
+                  <i class="bx bx-chevron-right"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Desktop Table View (hidden on mobile) -->
+            <div class="table-responsive d-none d-md-block">
               <table class="table table-hover">
                 <thead class="table-light">
                   <tr>
@@ -235,4 +307,359 @@
       </div>
     </div>
   </div>
+{% endblock %}
+
+{% block page_css %}
+<style>
+/* Create Ticket Button Styles */
+.btn-create-ticket {
+  white-space: nowrap;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-create-ticket i {
+  font-size: 1.125rem;
+}
+
+/* Mobile: Centered button */
+@media (max-width: 767px) {
+  .btn-create-ticket {
+    width: auto;
+    max-width: 100%;
+    padding: 0.75rem 1.5rem;
+    margin: 0 auto;
+  }
+}
+
+/* Tablet and Desktop: Compact button */
+@media (min-width: 768px) {
+  .btn-create-ticket {
+    min-width: auto;
+    width: auto;
+  }
+}
+
+/* Mobile Ticket Card Slider Styles */
+.mobile-ticket-slider {
+  position: relative;
+  overflow: hidden;
+  padding: 0.5rem 0;
+}
+
+.ticket-cards-container {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  padding: 0.5rem;
+}
+
+.ticket-cards-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+.ticket-card {
+  min-width: 100%;
+  max-width: 100%;
+  scroll-snap-align: center;
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.ticket-card:active {
+  transform: scale(0.98);
+}
+
+.ticket-card-header {
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 12px 12px 0 0;
+}
+
+.ticket-card-body {
+  padding: 1rem;
+}
+
+.ticket-card-footer {
+  padding: 1rem;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+  border-radius: 0 0 12px 12px;
+}
+
+.slider-navigation {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+
+.slider-btn {
+  background: #fff;
+  border: 2px solid #e9ecef;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.2rem;
+  color: #6c757d;
+}
+
+.slider-btn:hover {
+  background: #0d6efd;
+  border-color: #0d6efd;
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.slider-btn:active {
+  transform: scale(0.95);
+}
+
+.slider-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: scale(1);
+}
+
+.slider-indicator {
+  font-weight: 600;
+  color: #6c757d;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* Swipe indicator animation */
+@keyframes swipeHint {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(10px); }
+}
+
+.ticket-card:first-child::after {
+  content: '← Swipe →';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(13, 110, 253, 0.9);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  pointer-events: none;
+  opacity: 0;
+  animation: swipeHint 2s ease-in-out 1s 2;
+}
+
+/* Mobile Responsive Styles for Ticket Filters */
+@media (max-width: 768px) {
+  /* Header section */
+  .card-header .card-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Filter form */
+  .form-select-sm {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .btn-sm {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
+
+  /* Statistics cards */
+  .col-xl-3,
+  .col-md-6 {
+    margin-bottom: 1rem;
+  }
+
+  /* Table responsive */
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.75rem 0.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Very small screens */
+  .card-body {
+    padding: 1rem;
+  }
+
+  .card-header {
+    padding: 1rem;
+  }
+
+  .btn-sm {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .form-select-sm {
+    font-size: 0.85rem;
+  }
+
+  /* Table adjustments */
+  .table {
+    font-size: 0.8rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.5rem 0.25rem;
+  }
+
+  .badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* Touch-friendly buttons */
+@media (hover: none) and (pointer: coarse) {
+  .btn {
+    min-height: 44px;
+  }
+
+  .form-select {
+    min-height: 44px;
+  }
+}
+</style>
+{% endblock %}
+
+{% block page_js %}
+<script>
+// Mobile Ticket Slider Functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const container = document.querySelector('.ticket-cards-container');
+  const prevBtn = document.getElementById('sliderPrev');
+  const nextBtn = document.getElementById('sliderNext');
+  const indicator = document.getElementById('sliderIndicator');
+  
+  if (!container || !prevBtn || !nextBtn) return;
+  
+  const cards = document.querySelectorAll('.ticket-card');
+  const totalCards = cards.length;
+  let currentIndex = 0;
+  
+  // Update indicator and button states
+  function updateSlider() {
+    indicator.textContent = `${currentIndex + 1} / ${totalCards}`;
+    
+    // Disable/enable buttons
+    prevBtn.disabled = currentIndex === 0;
+    nextBtn.disabled = currentIndex === totalCards - 1;
+    
+    // Scroll to current card
+    const cardWidth = cards[0].offsetWidth;
+    const gap = 16; // 1rem gap
+    container.scrollLeft = currentIndex * (cardWidth + gap);
+  }
+  
+  // Previous button
+  prevBtn.addEventListener('click', function() {
+    if (currentIndex > 0) {
+      currentIndex--;
+      updateSlider();
+    }
+  });
+  
+  // Next button
+  nextBtn.addEventListener('click', function() {
+    if (currentIndex < totalCards - 1) {
+      currentIndex++;
+      updateSlider();
+    }
+  });
+  
+  // Detect scroll position to update current index
+  let scrollTimeout;
+  container.addEventListener('scroll', function() {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(function() {
+      const cardWidth = cards[0].offsetWidth;
+      const gap = 16;
+      const scrollPosition = container.scrollLeft;
+      const newIndex = Math.round(scrollPosition / (cardWidth + gap));
+      
+      if (newIndex !== currentIndex && newIndex >= 0 && newIndex < totalCards) {
+        currentIndex = newIndex;
+        updateSlider();
+      }
+    }, 100);
+  });
+  
+  // Touch swipe support
+  let touchStartX = 0;
+  let touchEndX = 0;
+  
+  container.addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].screenX;
+  });
+  
+  container.addEventListener('touchend', function(e) {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+  });
+  
+  function handleSwipe() {
+    const swipeThreshold = 50;
+    const diff = touchStartX - touchEndX;
+    
+    if (Math.abs(diff) > swipeThreshold) {
+      if (diff > 0 && currentIndex < totalCards - 1) {
+        // Swipe left - next
+        currentIndex++;
+        updateSlider();
+      } else if (diff < 0 && currentIndex > 0) {
+        // Swipe right - previous
+        currentIndex--;
+        updateSlider();
+      }
+    }
+  }
+  
+  // Keyboard navigation
+  document.addEventListener('keydown', function(e) {
+    if (window.innerWidth >= 768) return; // Only on mobile
+    
+    if (e.key === 'ArrowLeft' && currentIndex > 0) {
+      currentIndex--;
+      updateSlider();
+    } else if (e.key === 'ArrowRight' && currentIndex < totalCards - 1) {
+      currentIndex++;
+      updateSlider();
+    }
+  });
+  
+  // Initialize
+  updateSlider();
+});
+</script>
 {% endblock %}

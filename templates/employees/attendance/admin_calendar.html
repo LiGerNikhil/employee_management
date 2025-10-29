@@ -1,0 +1,590 @@
+{% extends layout_path %}
+
+{% load static %}
+
+{% block title %}Attendance Calendar | Admin Portal{% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- Page Header -->
+  <div class="col-12 mb-4">
+    <div class="card bg-gradient-primary text-white">
+      <div class="card-body">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+          <div>
+            <h4 class="card-title text-white mb-1">
+              <i class="bx bx-calendar me-2"></i>Attendance Calendar
+            </h4>
+            <p class="mb-0 opacity-75">Monitor employee attendance and view detailed insights</p>
+          </div>
+          <div>
+            <a href="{% url 'employees:attendance_list' %}" class="btn btn-light">
+              <i class="bx bx-list-ul me-1"></i>View List
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Month Statistics -->
+  <div class="col-xl-3 col-md-6 col-12 mb-4">
+    <div class="card">
+      <div class="card-body text-center">
+        <div class="avatar mx-auto mb-3 bg-label-primary" style="width: 50px; height: 50px;">
+          <div class="avatar-initial rounded">
+            <i class="bx bx-calendar-check icon-20px"></i>
+          </div>
+        </div>
+        <h4 class="mb-1">{{ total_working_days }}</h4>
+        <small class="text-muted">Working Days</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 col-12 mb-4">
+    <div class="card">
+      <div class="card-body text-center">
+        <div class="avatar mx-auto mb-3 bg-label-success" style="width: 50px; height: 50px;">
+          <div class="avatar-initial rounded">
+            <i class="bx bx-check-circle icon-20px"></i>
+          </div>
+        </div>
+        <h4 class="mb-1 text-success">{{ total_present }}</h4>
+        <small class="text-muted">Total Present</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 col-12 mb-4">
+    <div class="card">
+      <div class="card-body text-center">
+        <div class="avatar mx-auto mb-3 bg-label-danger" style="width: 50px; height: 50px;">
+          <div class="avatar-initial rounded">
+            <i class="bx bx-x-circle icon-20px"></i>
+          </div>
+        </div>
+        <h4 class="mb-1 text-danger">{{ total_absent }}</h4>
+        <small class="text-muted">Total Absent</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 col-12 mb-4">
+    <div class="card">
+      <div class="card-body text-center">
+        <div class="avatar mx-auto mb-3 bg-label-info" style="width: 50px; height: 50px;">
+          <div class="avatar-initial rounded">
+            <i class="bx bx-group icon-20px"></i>
+          </div>
+        </div>
+        <h4 class="mb-1 text-info">{{ all_employees.count }}</h4>
+        <small class="text-muted">Total Employees</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar Card -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+          <h5 class="card-title m-0">{{ month_name }} {{ year }}</h5>
+          
+          <!-- Filters and Navigation -->
+          <div class="d-flex gap-2 flex-wrap align-items-center">
+            <!-- Employee Filter -->
+            <select class="form-select form-select-sm" style="width: auto; min-width: 150px;" onchange="updateFilters()">
+              <option value="">All Employees</option>
+              {% for emp in all_employees %}
+                <option value="{{ emp.id }}" {% if selected_employee and selected_employee.id == emp.id %}selected{% endif %}>
+                  {{ emp.name }}
+                </option>
+              {% endfor %}
+            </select>
+            
+            <!-- Quick Month Selector -->
+            <div class="btn-group" role="group">
+              {% for m in months_list %}
+                <a href="?year={{ year }}&month={{ m.number }}{% if selected_employee %}&employee={{ selected_employee.id }}{% endif %}" 
+                   class="btn btn-sm {% if m.number == month %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                   title="{{ m.name }}">
+                  {{ m.abbr }}
+                </a>
+              {% endfor %}
+            </div>
+            
+            <!-- Year Selector -->
+            <select class="form-select form-select-sm" style="width: auto;" onchange="window.location.href='?year='+this.value+'&month={{ month }}{% if selected_employee %}&employee={{ selected_employee.id }}{% endif %}'">
+              {% for y in year_range %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+            
+            <!-- Navigation Arrows -->
+            <div class="btn-group" role="group">
+              <a href="?year={{ prev_year }}&month={{ prev_month }}{% if selected_employee %}&employee={{ selected_employee.id }}{% endif %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bx bx-chevron-left"></i>
+              </a>
+              <a href="?year={{ current_date.year }}&month={{ current_date.month }}{% if selected_employee %}&employee={{ selected_employee.id }}{% endif %}" class="btn btn-sm btn-outline-secondary" title="Today">
+                <i class="bx bx-calendar-event"></i>
+              </a>
+              <a href="?year={{ next_year }}&month={{ next_month }}{% if selected_employee %}&employee={{ selected_employee.id }}{% endif %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bx bx-chevron-right"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Calendar Grid -->
+        <div class="table-responsive">
+          <table class="table table-bordered attendance-calendar">
+            <thead>
+              <tr>
+                <th class="text-center">Sun</th>
+                <th class="text-center">Mon</th>
+                <th class="text-center">Tue</th>
+                <th class="text-center">Wed</th>
+                <th class="text-center">Thu</th>
+                <th class="text-center">Fri</th>
+                <th class="text-center">Sat</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for week in calendar_data %}
+                <tr>
+                  {% for day in week %}
+                    {% if day %}
+                      <td class="calendar-day {% if day.is_today %}today{% endif %} {% if day.is_future %}future{% endif %} {% if day.is_holiday %}holiday{% endif %}"
+                          data-date="{{ day.date|date:'Y-m-d' }}"
+                          {% if day.attendance_records %}
+                            data-bs-toggle="modal" 
+                            data-bs-target="#dayDetailModal"
+                            data-day="{{ day.day }}"
+                            style="cursor: pointer;"
+                          {% endif %}>
+                        <div class="day-number">{{ day.day }}</div>
+                        
+                        {% if day.total_present > 0 or day.absent_count > 0 %}
+                          <div class="day-stats mt-2">
+                            {% if day.checked_out_count > 0 %}
+                              <div class="stat-item">
+                                <span class="badge bg-success badge-sm">
+                                  <i class="bx bx-check"></i> {{ day.checked_out_count }}
+                                </span>
+                              </div>
+                            {% endif %}
+                            {% if day.checked_in_count > 0 %}
+                              <div class="stat-item">
+                                <span class="badge bg-warning badge-sm">
+                                  <i class="bx bx-time"></i> {{ day.checked_in_count }}
+                                </span>
+                              </div>
+                            {% endif %}
+                            {% if day.absent_count > 0 %}
+                              <div class="stat-item">
+                                <span class="badge bg-danger badge-sm">
+                                  <i class="bx bx-x"></i> {{ day.absent_count }}
+                                </span>
+                              </div>
+                            {% endif %}
+                          </div>
+                        {% endif %}
+                      </td>
+                    {% else %}
+                      <td class="calendar-day empty"></td>
+                    {% endif %}
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Legend -->
+        <div class="mt-4">
+          <h6 class="mb-3">Legend:</h6>
+          <div class="d-flex flex-wrap gap-3">
+            <div class="d-flex align-items-center">
+              <span class="badge bg-success me-2"><i class="bx bx-check"></i></span>
+              <span>Checked Out</span>
+            </div>
+            <div class="d-flex align-items-center">
+              <span class="badge bg-warning me-2"><i class="bx bx-time"></i></span>
+              <span>Checked In Only</span>
+            </div>
+            <div class="d-flex align-items-center">
+              <span class="badge bg-danger me-2"><i class="bx bx-x"></i></span>
+              <span>Absent</span>
+            </div>
+            <div class="d-flex align-items-center">
+              <span class="badge bg-secondary me-2"><i class="bx bx-calendar"></i></span>
+              <span>Holiday (Sun & 1st, 3rd, 5th Sat)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Day Detail Modal -->
+<div class="modal fade" id="dayDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title text-white">
+          <i class="bx bx-calendar-check me-2"></i>Attendance Details - <span id="modal-date"></span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="modal-body-content">
+        <!-- Content will be loaded dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_css %}
+<style>
+.attendance-calendar {
+  margin-bottom: 0;
+}
+
+.attendance-calendar th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  padding: 12px 8px;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+}
+
+.calendar-day {
+  height: 120px;
+  vertical-align: top;
+  padding: 8px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.calendar-day.empty {
+  background-color: #f8f9fa;
+}
+
+.calendar-day.today {
+  background-color: #e7f3ff;
+  border: 2px solid #0d6efd !important;
+}
+
+.calendar-day.future {
+  background-color: #fafafa;
+  opacity: 0.6;
+}
+
+.calendar-day.holiday {
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  position: relative;
+}
+
+.calendar-day.holiday::after {
+  content: '🏖️';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 0.9rem;
+  opacity: 0.6;
+}
+
+.calendar-day:not(.empty):not(.future):hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.calendar-day[data-bs-toggle="modal"] {
+  cursor: pointer !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+.calendar-day[data-bs-toggle="modal"]:hover {
+  background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);
+}
+
+.calendar-day[data-bs-toggle="modal"]:active {
+  transform: scale(0.98);
+}
+
+.day-number {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.day-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+}
+
+.badge-sm {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Mobile Responsive */
+@media (max-width: 992px) {
+  /* Tablet adjustments */
+  .calendar-day {
+    height: 110px;
+    padding: 6px;
+  }
+  
+  .day-number {
+    font-size: 1rem;
+  }
+  
+  .day-stats {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Mobile adjustments */
+  .card-header {
+    padding: 1rem;
+  }
+  
+  .card-body {
+    padding: 0.75rem;
+  }
+  
+  /* Make table fully responsive */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .attendance-calendar {
+    min-width: 100%;
+    font-size: 0.75rem;
+  }
+  
+  .attendance-calendar th {
+    padding: 8px 4px;
+    font-size: 0.7rem;
+  }
+  
+  .calendar-day {
+    height: 90px;
+    padding: 4px;
+  }
+  
+  .day-number {
+    font-size: 0.9rem;
+  }
+  
+  .badge-sm {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .btn-group .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Extra small mobile */
+  .card-header h5 {
+    font-size: 0.95rem;
+  }
+  
+  /* Stack controls vertically */
+  .card-header .d-flex {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  
+  .form-select-sm {
+    width: 100% !important;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Calendar adjustments */
+  .attendance-calendar th {
+    padding: 6px 2px;
+    font-size: 0.65rem;
+  }
+  
+  .calendar-day {
+    height: 75px;
+    padding: 2px;
+  }
+  
+  .day-number {
+    font-size: 0.8rem;
+  }
+  
+  .badge-sm {
+    font-size: 0.6rem;
+    padding: 0.15rem 0.3rem;
+  }
+  
+  .day-stats {
+    font-size: 0.6rem;
+  }
+  
+  .day-stats .badge {
+    font-size: 0.55rem;
+    padding: 0.1rem 0.2rem;
+  }
+  
+  /* Reduce hover effects on mobile */
+  .calendar-day:not(.empty):not(.future):hover {
+    transform: scale(1.02);
+  }
+  
+  /* Legend adjustments */
+  .mt-4 h6 {
+    font-size: 0.9rem;
+  }
+  
+  .mt-4 .d-flex span {
+    font-size: 0.75rem;
+  }
+  
+  .mt-4 .badge {
+    font-size: 0.65rem;
+  }
+  
+  /* Stats cards */
+  .card-body h4 {
+    font-size: 1.25rem;
+  }
+  
+  .card-body small {
+    font-size: 0.75rem;
+  }
+}
+</style>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function updateFilters() {
+  const employeeSelect = document.querySelector('select.form-select');
+  const employeeId = employeeSelect.value;
+  const url = new URL(window.location.href);
+  
+  if (employeeId) {
+    url.searchParams.set('employee', employeeId);
+  } else {
+    url.searchParams.delete('employee');
+  }
+  
+  window.location.href = url.toString();
+}
+
+// Add keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  const currentMonth = {{ month }};
+  const currentYear = {{ year }};
+  const employeeParam = '{% if selected_employee %}&employee={{ selected_employee.id }}{% endif %}';
+  
+  if (e.key === 'ArrowLeft') {
+    // Previous month
+    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+    window.location.href = `?year=${prevYear}&month=${prevMonth}${employeeParam}`;
+  } else if (e.key === 'ArrowRight') {
+    // Next month
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+    window.location.href = `?year=${nextYear}&month=${nextMonth}${employeeParam}`;
+  }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  const dayDetailModal = document.getElementById('dayDetailModal');
+  
+  if (dayDetailModal) {
+    dayDetailModal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      const date = button.getAttribute('data-date');
+      const day = button.getAttribute('data-day');
+      
+      // Update modal title
+      document.getElementById('modal-date').textContent = new Date(date).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      // Get attendance records for this day
+      const attendanceRecords = [];
+      {% for week in calendar_data %}
+        {% for day in week %}
+          {% if day and day.attendance_records %}
+            if ('{{ day.date|date:"Y-m-d" }}' === date) {
+              {% for record in day.attendance_records %}
+                attendanceRecords.push({
+                  employee: '{{ record.employee.name }}',
+                  employee_id: '{{ record.employee.employee_id }}',
+                  checkin: '{{ record.check_in_time|date:"H:i:s" }}',
+                  checkout: '{% if record.check_out_time %}{{ record.check_out_time|date:"H:i:s" }}{% else %}Not checked out{% endif %}',
+                  duration: '{{ record.duration }}',
+                  status: '{% if record.check_out_time %}complete{% else %}pending{% endif %}'
+                });
+              {% endfor %}
+            }
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+      
+      // Build modal content
+      let content = '';
+      if (attendanceRecords.length > 0) {
+        content += '<div class="table-responsive"><table class="table table-hover">';
+        content += '<thead><tr><th>Employee</th><th>ID</th><th>Check-in</th><th>Check-out</th><th>Duration</th><th>Status</th></tr></thead>';
+        content += '<tbody>';
+        
+        attendanceRecords.forEach(record => {
+          const statusBadge = record.status === 'complete' 
+            ? '<span class="badge bg-success"><i class="bx bx-check"></i> Complete</span>'
+            : '<span class="badge bg-warning"><i class="bx bx-time"></i> Pending</span>';
+          
+          content += `<tr>
+            <td>${record.employee}</td>
+            <td>${record.employee_id}</td>
+            <td>${record.checkin}</td>
+            <td>${record.checkout}</td>
+            <td>${record.duration}</td>
+            <td>${statusBadge}</td>
+          </tr>`;
+        });
+        
+        content += '</tbody></table></div>';
+      } else {
+        content = '<div class="alert alert-info"><i class="bx bx-info-circle me-2"></i>No attendance records for this day.</div>';
+      }
+      
+      document.getElementById('modal-body-content').innerHTML = content;
+    });
+  }
+});
+</script>
+{% endblock %}

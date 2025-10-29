@@ -41,7 +41,14 @@ DEBUG = os.environ.get("DEBUG", 'True').lower() in ['true', 'yes', '1']
 
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "*"]
+ALLOWED_HOSTS = [
+    "localhost",
+    "0.0.0.0",
+    "127.0.0.1",
+    "ad677d4b76a8.ngrok-free.app",
+    "*",
+]
+
 
 # Current DJANGO_ENVIRONMENT
 ENVIRONMENT = os.environ.get("DJANGO_ENVIRONMENT", default="local")
@@ -163,6 +170,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 
 STATICFILES_DIRS = [
+    BASE_DIR / "static",
     BASE_DIR / "src" / "assets",
 ]
 

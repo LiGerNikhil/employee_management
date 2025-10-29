@@ -1675,3 +1675,323 @@ def admin_update_ticket(request, pk):
                     messages.success(request, 'Comment added successfully. Employee will see this comment.')
     
     return redirect('employees:admin_tickets')
+
+
+# ===========================
+# ATTENDANCE CALENDAR VIEWS
+# ===========================
+
+@login_required
+@user_passes_test(is_employee)
+def employee_attendance_calendar(request):
+    """Interactive attendance calendar for employees"""
+    from datetime import datetime, timedelta
+    from calendar import monthrange
+    import calendar
+    
+    employee = request.user.employee_profile
+    
+    # Get year and month from query params, default to current
+    current_date = timezone.now()
+    year = int(request.GET.get('year', current_date.year))
+    month = int(request.GET.get('month', current_date.month))
+    
+    # Ensure valid month/year
+    if month < 1:
+        month = 12
+        year -= 1
+    elif month > 12:
+        month = 1
+        year += 1
+    
+    # Get first and last day of the month
+    first_day = datetime(year, month, 1).date()
+    last_day = datetime(year, month, monthrange(year, month)[1]).date()
+    
+    # Get all attendance records for this month
+    attendance_records = Attendance.objects.filter(
+        employee=employee,
+        date__gte=first_day,
+        date__lte=last_day
+    ).select_related('employee')
+    
+    # Create a dictionary for quick lookup
+    attendance_dict = {record.date: record for record in attendance_records}
+    
+    # Helper function to check if a date is a holiday
+    def is_holiday(date_obj):
+        """Check if date is a holiday (Sunday or 1st, 3rd, 5th Saturday)"""
+        # Sunday is weekday 6
+        if date_obj.weekday() == 6:
+            return True
+        
+        # Saturday is weekday 5
+        if date_obj.weekday() == 5:
+            # Count which Saturday of the month this is
+            saturday_count = 0
+            for d in range(1, date_obj.day + 1):
+                if datetime(date_obj.year, date_obj.month, d).weekday() == 5:
+                    saturday_count += 1
+            
+            # 1st, 3rd, 5th Saturday are holidays
+            if saturday_count in [1, 3, 5]:
+                return True
+        
+        return False
+    
+    # Generate calendar data
+    cal = calendar.monthcalendar(year, month)
+    calendar_data = []
+    
+    for week in cal:
+        week_data = []
+        for day in week:
+            if day == 0:
+                week_data.append(None)
+            else:
+                date_obj = datetime(year, month, day).date()
+                attendance = attendance_dict.get(date_obj)
+                is_holiday_day = is_holiday(date_obj)
+                
+                # Determine status
+                status = 'none'
+                status_class = ''
+                status_icon = ''
+                
+                if attendance:
+                    if attendance.check_out_time:
+                        status = 'present'
+                        status_class = 'bg-success'
+                        status_icon = 'bx-check-circle'
+                    else:
+                        status = 'checked-in'
+                        status_class = 'bg-warning'
+                        status_icon = 'bx-time'
+                elif is_holiday_day:  # Holiday
+                    status = 'holiday'
+                    status_class = 'bg-secondary'
+                    status_icon = 'bx-calendar'
+                elif date_obj < current_date.date():  # Past working day without attendance
+                    status = 'absent'
+                    status_class = 'bg-danger'
+                    status_icon = 'bx-x-circle'
+                
+                week_data.append({
+                    'day': day,
+                    'date': date_obj,
+                    'attendance': attendance,
+                    'status': status,
+                    'status_class': status_class,
+                    'status_icon': status_icon,
+                    'is_today': date_obj == current_date.date(),
+                    'is_future': date_obj > current_date.date(),
+                    'is_holiday': is_holiday_day
+                })
+        calendar_data.append(week_data)
+    
+    # Calculate statistics for the month (excluding holidays)
+    total_working_days = sum(1 for week in calendar_data for day in week 
+                            if day and not day['is_holiday'] and day['date'] <= current_date.date())
+    present_days = sum(1 for record in attendance_records if record.check_out_time)
+    absent_days = total_working_days - present_days
+    
+    # Get month navigation
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    next_month = month + 1 if month < 12 else 1
+    next_year = year if month < 12 else year + 1
+    
+    # Get all months for year selector
+    months_list = [
+        {'number': i, 'name': calendar.month_name[i], 'abbr': calendar.month_abbr[i]}
+        for i in range(1, 13)
+    ]
+    
+    # Get year range (current year ± 2 years)
+    year_range = range(current_date.year - 2, current_date.year + 3)
+    
+    # Get layout path
+    context = TemplateLayout.init(request, {
+        'employee': employee,
+        'calendar_data': calendar_data,
+        'year': year,
+        'month': month,
+        'month_name': calendar.month_name[month],
+        'prev_month': prev_month,
+        'prev_year': prev_year,
+        'next_month': next_month,
+        'next_year': next_year,
+        'current_date': current_date,
+        'total_working_days': total_working_days,
+        'present_days': present_days,
+        'absent_days': absent_days,
+        'attendance_percentage': round((present_days / total_working_days * 100) if total_working_days > 0 else 0, 1),
+        'months_list': months_list,
+        'year_range': year_range,
+    })
+    
+    return render(request, 'employees/attendance/calendar.html', context)
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def admin_attendance_calendar(request):
+    """Admin view for attendance calendar with detailed insights"""
+    from datetime import datetime, timedelta
+    from calendar import monthrange
+    import calendar
+    from django.db.models import Count, Q
+    
+    # Get year, month, and employee filter from query params
+    current_date = timezone.now()
+    year = int(request.GET.get('year', current_date.year))
+    month = int(request.GET.get('month', current_date.month))
+    employee_id = request.GET.get('employee')
+    
+    # Ensure valid month/year
+    if month < 1:
+        month = 12
+        year -= 1
+    elif month > 12:
+        month = 1
+        year += 1
+    
+    # Get first and last day of the month
+    first_day = datetime(year, month, 1).date()
+    last_day = datetime(year, month, monthrange(year, month)[1]).date()
+    
+    # Get all employees
+    all_employees = Employee.objects.all().order_by('name')
+    
+    # Filter by employee if specified
+    if employee_id:
+        selected_employee = get_object_or_404(Employee, id=employee_id)
+        employees = [selected_employee]
+    else:
+        selected_employee = None
+        employees = all_employees
+    
+    # Get all attendance records for this month
+    attendance_records = Attendance.objects.filter(
+        date__gte=first_day,
+        date__lte=last_day
+    ).select_related('employee')
+    
+    if employee_id:
+        attendance_records = attendance_records.filter(employee_id=employee_id)
+    
+    # Create attendance lookup by date and employee
+    attendance_by_date = {}
+    for record in attendance_records:
+        if record.date not in attendance_by_date:
+            attendance_by_date[record.date] = []
+        attendance_by_date[record.date].append(record)
+    
+    # Helper function to check if a date is a holiday
+    def is_holiday(date_obj):
+        """Check if date is a holiday (Sunday or 1st, 3rd, 5th Saturday)"""
+        # Sunday is weekday 6
+        if date_obj.weekday() == 6:
+            return True
+        
+        # Saturday is weekday 5
+        if date_obj.weekday() == 5:
+            # Count which Saturday of the month this is
+            saturday_count = 0
+            for d in range(1, date_obj.day + 1):
+                if datetime(date_obj.year, date_obj.month, d).weekday() == 5:
+                    saturday_count += 1
+            
+            # 1st, 3rd, 5th Saturday are holidays
+            if saturday_count in [1, 3, 5]:
+                return True
+        
+        return False
+    
+    # Generate calendar data
+    cal = calendar.monthcalendar(year, month)
+    calendar_data = []
+    
+    for week in cal:
+        week_data = []
+        for day in week:
+            if day == 0:
+                week_data.append(None)
+            else:
+                date_obj = datetime(year, month, day).date()
+                day_attendance = attendance_by_date.get(date_obj, [])
+                is_holiday_day = is_holiday(date_obj)
+                
+                # Count statuses
+                checked_in_count = len([a for a in day_attendance if not a.check_out_time])
+                checked_out_count = len([a for a in day_attendance if a.check_out_time])
+                total_present = len(day_attendance)
+                
+                # Calculate absent (only for past working days, not holidays)
+                is_past_working_day = date_obj < current_date.date() and not is_holiday_day
+                total_employees = len(employees) if not employee_id else 1
+                absent_count = total_employees - total_present if is_past_working_day else 0
+                
+                week_data.append({
+                    'day': day,
+                    'date': date_obj,
+                    'attendance_records': day_attendance,
+                    'checked_in_count': checked_in_count,
+                    'checked_out_count': checked_out_count,
+                    'total_present': total_present,
+                    'absent_count': absent_count,
+                    'is_today': date_obj == current_date.date(),
+                    'is_future': date_obj > current_date.date(),
+                    'is_holiday': is_holiday_day
+                })
+        calendar_data.append(week_data)
+    
+    # Calculate monthly statistics (excluding holidays)
+    total_working_days = sum(1 for week in calendar_data for day in week 
+                            if day and not day['is_holiday'] and day['date'] <= current_date.date())
+    
+    if employee_id:
+        employee_records = attendance_records.filter(employee_id=employee_id)
+        total_present = employee_records.filter(check_out_time__isnull=False).count()
+        total_absent = total_working_days - employee_records.count()
+    else:
+        total_present = attendance_records.filter(check_out_time__isnull=False).count()
+        total_expected = total_working_days * len(employees)
+        total_absent = total_expected - attendance_records.count()
+    
+    # Get month navigation
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    next_month = month + 1 if month < 12 else 1
+    next_year = year if month < 12 else year + 1
+    
+    # Get all months for selector
+    months_list = [
+        {'number': i, 'name': calendar.month_name[i], 'abbr': calendar.month_abbr[i]}
+        for i in range(1, 13)
+    ]
+    
+    # Get year range
+    year_range = range(current_date.year - 2, current_date.year + 3)
+    
+    # Get layout path
+    context = TemplateLayout.init(request, {
+        'calendar_data': calendar_data,
+        'year': year,
+        'month': month,
+        'month_name': calendar.month_name[month],
+        'prev_month': prev_month,
+        'prev_year': prev_year,
+        'next_month': next_month,
+        'next_year': next_year,
+        'current_date': current_date,
+        'all_employees': all_employees,
+        'selected_employee': selected_employee,
+        'total_working_days': total_working_days,
+        'total_present': total_present,
+        'total_absent': total_absent,
+        'months_list': months_list,
+        'year_range': year_range,
+    })
+    
+    return render(request, 'employees/attendance/admin_calendar.html', context)

@@ -588,3 +588,80 @@ class TicketComment(models.Model):
     def is_admin(self):
         """Check if comment is from admin"""
         return self.user.is_superuser
+
+
+class PasswordResetRequest(models.Model):
+    """Model to track employee password reset requests"""
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name='password_reset_requests',
+        help_text="Employee requesting password reset"
+    )
+    email = models.EmailField(help_text="Email address used for request")
+    reason = models.TextField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="Reason for password reset request"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        help_text="Status of the request"
+    )
+    new_password = models.CharField(
+        max_length=128,
+        blank=True,
+        null=True,
+        help_text="New password set by admin (temporary)"
+    )
+    processed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='processed_password_requests',
+        help_text="Admin who processed the request"
+    )
+    processed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the request was processed"
+    )
+    admin_notes = models.TextField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="Admin notes about the request"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Password Reset Request'
+        verbose_name_plural = 'Password Reset Requests'
+    
+    def __str__(self):
+        return f"Password reset request for {self.employee.name} - {self.status}"
+    
+    @property
+    def is_pending(self):
+        return self.status == 'pending'
+    
+    @property
+    def is_approved(self):
+        return self.status == 'approved'
+    
+    @property
+    def is_rejected(self):
+        return self.status == 'rejected'

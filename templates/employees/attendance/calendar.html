@@ -1,0 +1,564 @@
+{% extends layout_path %}
+
+{% load static %}
+
+{% block title %}My Attendance Calendar | Employee Portal{% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- Page Header -->
+  <div class="col-12 mb-4">
+    <div class="card bg-gradient-primary text-white">
+      <div class="card-body">
+        <h4 class="card-title text-white mb-1">
+          <i class="bx bx-calendar me-2"></i>My Attendance Calendar
+        </h4>
+        <p class="mb-0 opacity-75">Track your monthly attendance and view detailed records</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Month Statistics -->
+  <div class="col-xl-3 col-md-6 col-12 mb-4">
+    <div class="card">
+      <div class="card-body text-center">
+        <div class="avatar mx-auto mb-3 bg-label-primary" style="width: 50px; height: 50px;">
+          <div class="avatar-initial rounded">
+            <i class="bx bx-calendar-check icon-20px"></i>
+          </div>
+        </div>
+        <h4 class="mb-1">{{ total_working_days }}</h4>
+        <small class="text-muted">Working Days</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 col-12 mb-4">
+    <div class="card">
+      <div class="card-body text-center">
+        <div class="avatar mx-auto mb-3 bg-label-success" style="width: 50px; height: 50px;">
+          <div class="avatar-initial rounded">
+            <i class="bx bx-check-circle icon-20px"></i>
+          </div>
+        </div>
+        <h4 class="mb-1 text-success">{{ present_days }}</h4>
+        <small class="text-muted">Present</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 col-12 mb-4">
+    <div class="card">
+      <div class="card-body text-center">
+        <div class="avatar mx-auto mb-3 bg-label-danger" style="width: 50px; height: 50px;">
+          <div class="avatar-initial rounded">
+            <i class="bx bx-x-circle icon-20px"></i>
+          </div>
+        </div>
+        <h4 class="mb-1 text-danger">{{ absent_days }}</h4>
+        <small class="text-muted">Absent</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 col-12 mb-4">
+    <div class="card">
+      <div class="card-body text-center">
+        <div class="avatar mx-auto mb-3 bg-label-info" style="width: 50px; height: 50px;">
+          <div class="avatar-initial rounded">
+            <i class="bx bx-trending-up icon-20px"></i>
+          </div>
+        </div>
+        <h4 class="mb-1 text-info">{{ attendance_percentage }}%</h4>
+        <small class="text-muted">Attendance Rate</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar Card -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+          <h5 class="card-title m-0">{{ month_name }} {{ year }}</h5>
+          
+          <!-- Month/Year Selector -->
+          <div class="d-flex gap-2 flex-wrap">
+            <!-- Quick Month Selector -->
+            <div class="btn-group" role="group">
+              {% for m in months_list %}
+                <a href="?year={{ year }}&month={{ m.number }}" 
+                   class="btn btn-sm {% if m.number == month %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                   title="{{ m.name }}">
+                  {{ m.abbr }}
+                </a>
+              {% endfor %}
+            </div>
+            
+            <!-- Year Selector -->
+            <select class="form-select form-select-sm" style="width: auto;" onchange="window.location.href='?year='+this.value+'&month={{ month }}'">
+              {% for y in year_range %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+            
+            <!-- Navigation Arrows -->
+            <div class="btn-group" role="group">
+              <a href="?year={{ prev_year }}&month={{ prev_month }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bx bx-chevron-left"></i>
+              </a>
+              <a href="?year={{ current_date.year }}&month={{ current_date.month }}" class="btn btn-sm btn-outline-secondary" title="Today">
+                <i class="bx bx-calendar-event"></i>
+              </a>
+              <a href="?year={{ next_year }}&month={{ next_month }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bx bx-chevron-right"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Calendar Grid -->
+        <div class="table-responsive">
+          <table class="table table-bordered attendance-calendar">
+            <thead>
+              <tr>
+                <th class="text-center">Sun</th>
+                <th class="text-center">Mon</th>
+                <th class="text-center">Tue</th>
+                <th class="text-center">Wed</th>
+                <th class="text-center">Thu</th>
+                <th class="text-center">Fri</th>
+                <th class="text-center">Sat</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for week in calendar_data %}
+                <tr>
+                  {% for day in week %}
+                    {% if day %}
+                      <td class="calendar-day {% if day.is_today %}today{% endif %} {% if day.is_future %}future{% endif %} {{ day.status }}"
+                          data-date="{{ day.date|date:'Y-m-d' }}"
+                          {% if day.attendance %}
+                            data-bs-toggle="modal" 
+                            data-bs-target="#attendanceModal"
+                            data-checkin="{{ day.attendance.check_in_time|date:'H:i:s' }}"
+                            data-checkout="{% if day.attendance.check_out_time %}{{ day.attendance.check_out_time|date:'H:i:s' }}{% else %}Not checked out{% endif %}"
+                            data-duration="{{ day.attendance.duration }}"
+                            style="cursor: pointer;"
+                          {% endif %}>
+                        <div class="day-number">{{ day.day }}</div>
+                        {% if day.status != 'none' %}
+                          <div class="day-status">
+                            <span class="badge {{ day.status_class }} badge-sm">
+                              <i class="bx {{ day.status_icon }}"></i>
+                            </span>
+                          </div>
+                        {% endif %}
+                        {% if day.attendance %}
+                          <div class="day-time">
+                            <small class="text-muted">{{ day.attendance.check_in_time|date:'H:i' }}</small>
+                          </div>
+                        {% endif %}
+                      </td>
+                    {% else %}
+                      <td class="calendar-day empty"></td>
+                    {% endif %}
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Legend -->
+        <div class="mt-4">
+          <h6 class="mb-3">Legend:</h6>
+          <div class="d-flex flex-wrap gap-3">
+            <div class="d-flex align-items-center">
+              <span class="badge bg-success me-2"><i class="bx bx-check-circle"></i></span>
+              <span>Present (Checked Out)</span>
+            </div>
+            <div class="d-flex align-items-center">
+              <span class="badge bg-warning me-2"><i class="bx bx-time"></i></span>
+              <span>Checked In (Not Checked Out)</span>
+            </div>
+            <div class="d-flex align-items-center">
+              <span class="badge bg-danger me-2"><i class="bx bx-x-circle"></i></span>
+              <span>Absent</span>
+            </div>
+            <div class="d-flex align-items-center">
+              <span class="badge bg-secondary me-2"><i class="bx bx-calendar"></i></span>
+              <span>Holiday (Sun & 1st, 3rd, 5th Sat)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance Detail Modal -->
+<div class="modal fade" id="attendanceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title text-white">
+          <i class="bx bx-calendar-check me-2"></i>Attendance Details
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-bold">Date:</label>
+          <p id="modal-date" class="mb-0"></p>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Check-in Time:</label>
+          <p id="modal-checkin" class="mb-0"></p>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Check-out Time:</label>
+          <p id="modal-checkout" class="mb-0"></p>
+        </div>
+        <div class="mb-0">
+          <label class="form-label fw-bold">Duration:</label>
+          <p id="modal-duration" class="mb-0"></p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_css %}
+<style>
+.attendance-calendar {
+  margin-bottom: 0;
+}
+
+.attendance-calendar th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  padding: 12px 8px;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+}
+
+.calendar-day {
+  height: 100px;
+  vertical-align: top;
+  padding: 8px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.calendar-day.empty {
+  background-color: #f8f9fa;
+}
+
+.calendar-day.today {
+  background-color: #e7f3ff;
+  border: 2px solid #0d6efd !important;
+}
+
+.calendar-day.future {
+  background-color: #fafafa;
+  opacity: 0.6;
+}
+
+.calendar-day.present {
+  background-color: #d1f2eb;
+}
+
+.calendar-day.checked-in {
+  background-color: #fff3cd;
+}
+
+.calendar-day.absent {
+  background-color: #f8d7da;
+}
+
+.calendar-day.holiday {
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  position: relative;
+}
+
+.calendar-day.holiday::after {
+  content: '🏖️';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 0.9rem;
+  opacity: 0.6;
+}
+
+.calendar-day:not(.empty):not(.future):hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.calendar-day[data-bs-toggle="modal"] {
+  cursor: pointer !important;
+}
+
+.calendar-day[data-bs-toggle="modal"]:active {
+  transform: scale(0.98);
+}
+
+.day-number {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.day-status {
+  margin-top: 4px;
+}
+
+.day-time {
+  margin-top: 4px;
+  font-size: 0.75rem;
+}
+
+.badge-sm {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Mobile Responsive */
+@media (max-width: 992px) {
+  /* Tablet adjustments */
+  .btn-group .btn-sm {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .calendar-day {
+    height: 85px;
+    padding: 6px;
+  }
+  
+  .day-number {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Mobile adjustments */
+  .card-header {
+    padding: 1rem;
+  }
+  
+  .card-body {
+    padding: 0.75rem;
+  }
+  
+  /* Hide month abbreviations, show only icons */
+  .btn-group .btn-sm {
+    font-size: 0;
+    padding: 0.35rem 0.5rem;
+    min-width: 32px;
+  }
+  
+  .btn-group .btn-sm::first-letter {
+    font-size: 0.7rem;
+  }
+  
+  /* Make table fully responsive */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .attendance-calendar {
+    min-width: 100%;
+    font-size: 0.75rem;
+  }
+  
+  .attendance-calendar th {
+    padding: 8px 4px;
+    font-size: 0.7rem;
+  }
+  
+  .calendar-day {
+    height: 70px;
+    padding: 4px;
+  }
+  
+  .day-number {
+    font-size: 0.9rem;
+  }
+  
+  .day-time {
+    font-size: 0.65rem;
+  }
+  
+  .btn-group .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Extra small mobile */
+  .card-header h5 {
+    font-size: 0.95rem;
+  }
+  
+  /* Stack month selector vertically */
+  .card-header .d-flex {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  
+  .btn-group {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+  }
+  
+  .btn-group .btn-sm {
+    flex: 1;
+    min-width: 28px;
+    font-size: 0.65rem;
+    padding: 0.3rem 0.2rem;
+  }
+  
+  .form-select-sm {
+    width: 100% !important;
+    margin-top: 0.5rem;
+  }
+  
+  /* Calendar adjustments */
+  .attendance-calendar th {
+    padding: 6px 2px;
+    font-size: 0.65rem;
+  }
+  
+  .calendar-day {
+    height: 55px;
+    padding: 2px;
+    font-size: 0.7rem;
+  }
+  
+  .day-number {
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+  }
+  
+  .day-status .badge {
+    font-size: 0.55rem;
+    padding: 0.1rem 0.25rem;
+  }
+  
+  .day-status .bx {
+    font-size: 0.6rem;
+  }
+  
+  .day-time {
+    display: none;
+  }
+  
+  /* Reduce hover effects on mobile */
+  .calendar-day:not(.empty):not(.future):hover {
+    transform: scale(1.02);
+  }
+  
+  /* Legend adjustments */
+  .mt-4 h6 {
+    font-size: 0.9rem;
+  }
+  
+  .mt-4 .d-flex span {
+    font-size: 0.75rem;
+  }
+  
+  .mt-4 .badge {
+    font-size: 0.65rem;
+  }
+  
+  /* Stats cards */
+  .card-body h4 {
+    font-size: 1.25rem;
+  }
+  
+  .card-body small {
+    font-size: 0.75rem;
+  }
+}
+</style>
+{% endblock %}
+
+{% block page_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const attendanceModal = document.getElementById('attendanceModal');
+  
+  if (attendanceModal) {
+    attendanceModal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      const date = button.getAttribute('data-date');
+      const checkin = button.getAttribute('data-checkin');
+      const checkout = button.getAttribute('data-checkout');
+      const duration = button.getAttribute('data-duration');
+      
+      // Update modal content
+      document.getElementById('modal-date').textContent = new Date(date).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      document.getElementById('modal-checkin').textContent = checkin;
+      document.getElementById('modal-checkout').textContent = checkout;
+      document.getElementById('modal-duration').textContent = duration;
+    });
+  }
+  
+  // Add hover effect to calendar days with attendance
+  const calendarDays = document.querySelectorAll('.calendar-day[data-bs-toggle="modal"]');
+  calendarDays.forEach(day => {
+    day.addEventListener('mouseenter', function() {
+      this.style.cursor = 'pointer';
+    });
+  });
+  
+  // Add keyboard navigation for month selector
+  document.addEventListener('keydown', function(e) {
+    const currentMonth = {{ month }};
+    const currentYear = {{ year }};
+    
+    if (e.key === 'ArrowLeft') {
+      // Previous month
+      const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+      const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+      window.location.href = `?year=${prevYear}&month=${prevMonth}`;
+    } else if (e.key === 'ArrowRight') {
+      // Next month
+      const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+      const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+      window.location.href = `?year=${nextYear}&month=${nextMonth}`;
+    }
+  });
+  
+  // Add animation to statistics cards
+  const statCards = document.querySelectorAll('.card');
+  statCards.forEach((card, index) => {
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(20px)';
+    setTimeout(() => {
+      card.style.transition = 'all 0.5s ease';
+      card.style.opacity = '1';
+      card.style.transform = 'translateY(0)';
+    }, index * 100);
+  });
+});
+</script>
+{% endblock %}

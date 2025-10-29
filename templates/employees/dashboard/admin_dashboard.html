@@ -18,23 +18,29 @@
 {% block content %}
   <div class="row">
     <!-- Welcome Message -->
-    <div class="col-12 mb-6">
-      <div class="card">
+    <div class="col-12 mb-4">
+      <div class="card bg-gradient-primary text-white overflow-hidden" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
         <div class="d-flex align-items-start row">
           <div class="col-sm-7">
             <div class="card-body">
-              <h5 class="card-title text-primary mb-3">Welcome to Kwikster Admin! 🎉</h5>
-              <p class="mb-6">Manage your employees, track attendance, and streamline your HR processes.<br/>Access all administrative functions from this dashboard.</p>
-              <div class="d-flex gap-3">
-                <a href="{% url 'employees:employee_create' %}" class="btn btn-primary">Add New Employee</a>
-                <a href="{% url 'employees:employee_list' %}" class="btn btn-outline-primary">View All Employees</a>
-                <a href="{% url 'employees:attendance_list' %}" class="btn btn-outline-secondary">View Attendance</a>
+              <h4 class="card-title text-white mb-3">👋 Welcome Back, Admin!</h4>
+              <p class="mb-4 text-white opacity-90">Manage your workforce efficiently with real-time insights and powerful tools.<br/>Your command center for all HR operations.</p>
+              <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'employees:employee_create' %}" class="btn btn-light">
+                  <i class="bx bx-user-plus me-1"></i>Add Employee
+                </a>
+                <a href="{% url 'employees:admin_attendance_calendar' %}" class="btn btn-outline-light">
+                  <i class="bx bx-calendar me-1"></i>Calendar
+                </a>
+                <a href="{% url 'employees:admin_tickets' %}" class="btn btn-outline-light">
+                  <i class="bx bx-support me-1"></i>Tickets
+                </a>
               </div>
             </div>
           </div>
-          <div class="col-sm-5 text-center text-sm-left">
+          <div class="col-sm-5 text-center text-sm-left d-none d-sm-block">
             <div class="card-body pb-0 px-0 px-md-6">
-              <img src="{% static 'img/illustrations/man-with-laptop.png' %}" height="175" alt="Admin Dashboard"/>
+              <img src="{% static 'img/illustrations/man-with-laptop.png' %}" height="175" alt="Admin Dashboard" style="filter: brightness(1.1);"/>
             </div>
           </div>
         </div>
@@ -42,161 +48,157 @@
     </div>
 
     <!-- Statistics Cards -->
-    <div class="col-xl-3 col-md-6 col-12 mb-6">
-      <div class="card h-100">
-        <div class="card-body">
-          <div class="card-title d-flex align-items-start justify-content-between mb-4">
-            <div class="avatar flex-shrink-0 me-3">
-              <div class="avatar-initial bg-label-primary rounded">
-                <i class="icon-base bx bx-user icon-24px"></i>
+    <div class="col-xl-3 col-md-6 col-12 mb-4">
+      <a href="{% url 'employees:employee_list' %}" class="text-decoration-none">
+        <div class="card h-100 stat-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-3">
+              <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
+                <div class="avatar-initial bg-primary rounded">
+                  <i class="bx bx-group icon-24px text-white"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1">
+                <span class="d-block text-muted small mb-1">Total Employees</span>
+                <h3 class="mb-0">{{ total_employees }}</h3>
               </div>
             </div>
-            <div class="dropdown">
-              <button class="btn p-0" type="button" id="cardOpt1" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <i class="icon-base bx bx-dots-vertical-rounded icon-24px"></i>
-              </button>
-              <div class="dropdown-menu" aria-labelledby="cardOpt1">
-                <a class="dropdown-item" href="{% url 'employees:employee_list' %}">View Details</a>
-                <a class="dropdown-item" href="{% url 'employees:employee_create' %}">Add Employee</a>
-              </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <small class="text-success fw-medium">
+                <i class="bx bx-up-arrow-alt"></i> All Active
+              </small>
+              <i class="bx bx-chevron-right text-muted"></i>
             </div>
           </div>
-          <span class="d-block mb-1">Total Employees</span>
-          <h3 class="card-title mb-2">{{ total_employees }}</h3>
-          <small class="text-success fw-medium">
-            <i class="icon-base bx bx-up-arrow-alt"></i> Active Employees
-          </small>
         </div>
-      </div>
+      </a>
     </div>
 
-    <div class="col-xl-3 col-md-6 col-12 mb-6">
-      <div class="card h-100">
-        <div class="card-body">
-          <div class="card-title d-flex align-items-start justify-content-between mb-4">
-            <div class="avatar flex-shrink-0 me-3">
-              <div class="avatar-initial bg-label-success rounded">
-                <i class="icon-base bx bx-check-circle icon-24px"></i>
+    <div class="col-xl-3 col-md-6 col-12 mb-4">
+      <a href="{% url 'employees:attendance_list' %}" class="text-decoration-none">
+        <div class="card h-100 stat-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-3">
+              <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
+                <div class="avatar-initial bg-success rounded">
+                  <i class="bx bx-check-circle icon-24px text-white"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1">
+                <span class="d-block text-muted small mb-1">Today's Check-ins</span>
+                <h3 class="mb-0">{{ today_checkins }}</h3>
               </div>
             </div>
-            <div class="dropdown">
-              <button class="btn p-0" type="button" id="cardOpt2" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <i class="icon-base bx bx-dots-vertical-rounded icon-24px"></i>
-              </button>
-              <div class="dropdown-menu" aria-labelledby="cardOpt2">
-                <a class="dropdown-item" href="{% url 'employees:attendance_list' %}">View All</a>
-                <a class="dropdown-item" href="{% url 'employees:attendance_list' %}?date={{ date_today|date:'Y-m-d' }}">Today</a>
-              </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <small class="text-success fw-medium">
+                <i class="bx bx-trending-up"></i> Active Now
+              </small>
+              <i class="bx bx-chevron-right text-muted"></i>
             </div>
           </div>
-          <span class="d-block mb-1">Today's Check-ins</span>
-          <h3 class="card-title mb-2">{{ today_checkins }}</h3>
-          <small class="text-success fw-medium">
-            <i class="icon-base bx bx-up-arrow-alt"></i> {{ today_checkins|add:0 }}% of total employees
-          </small>
         </div>
-      </div>
+      </a>
     </div>
 
-    <div class="col-xl-3 col-md-6 col-12 mb-6">
-      <div class="card h-100">
-        <div class="card-body">
-          <div class="card-title d-flex align-items-start justify-content-between mb-4">
-            <div class="avatar flex-shrink-0 me-3">
-              <div class="avatar-initial bg-label-info rounded">
-                <i class="icon-base bx bx-time-five icon-24px"></i>
+    <div class="col-xl-3 col-md-6 col-12 mb-4">
+      <a href="{% url 'employees:admin_attendance_calendar' %}" class="text-decoration-none">
+        <div class="card h-100 stat-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-3">
+              <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
+                <div class="avatar-initial bg-info rounded">
+                  <i class="bx bx-calendar icon-24px text-white"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1">
+                <span class="d-block text-muted small mb-1">Attendance</span>
+                <h3 class="mb-0">Calendar</h3>
               </div>
             </div>
-            <div class="dropdown">
-              <button class="btn p-0" type="button" id="cardOpt3" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <i class="icon-base bx bx-dots-vertical-rounded icon-24px"></i>
-              </button>
-              <div class="dropdown-menu" aria-labelledby="cardOpt3">
-                <a class="dropdown-item" href="{% url 'admin:index' %}">Django Admin</a>
-              </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <small class="text-info fw-medium">
+                <i class="bx bx-calendar-event"></i> View Monthly
+              </small>
+              <i class="bx bx-chevron-right text-muted"></i>
             </div>
           </div>
-          <span class="d-block mb-1">System Status</span>
-          <h3 class="card-title mb-2 text-success">Online</h3>
-          <small class="text-muted fw-medium">
-            All systems operational
-          </small>
         </div>
-      </div>
+      </a>
     </div>
 
-    <div class="col-xl-3 col-md-6 col-12 mb-6">
-      <div class="card h-100">
-        <div class="card-body">
-          <div class="card-title d-flex align-items-start justify-content-between mb-4">
-            <div class="avatar flex-shrink-0 me-3">
-              <div class="avatar-initial bg-label-warning rounded">
-                <i class="icon-base bx bx-calendar icon-24px"></i>
+    <div class="col-xl-3 col-md-6 col-12 mb-4">
+      <a href="{% url 'employees:admin_tickets' %}" class="text-decoration-none">
+        <div class="card h-100 stat-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-3">
+              <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
+                <div class="avatar-initial bg-warning rounded">
+                  <i class="bx bx-support icon-24px text-white"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1">
+                <span class="d-block text-muted small mb-1">Support Tickets</span>
+                <h3 class="mb-0">Manage</h3>
               </div>
             </div>
-            <div class="dropdown">
-              <button class="btn p-0" type="button" id="cardOpt4" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <i class="icon-base bx bx-dots-vertical-rounded icon-24px"></i>
-              </button>
-              <div class="dropdown-menu" aria-labelledby="cardOpt4">
-                <a class="dropdown-item" href="{% url 'employees:logout' %}">Logout</a>
-              </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <small class="text-warning fw-medium">
+                <i class="bx bx-message-dots"></i> View All
+              </small>
+              <i class="bx bx-chevron-right text-muted"></i>
             </div>
           </div>
-          <span class="d-block mb-1">Current Date</span>
-          <h3 class="card-title mb-2">{{ today_checkins|date:"M d, Y" }}</h3>
-          <small class="text-muted fw-medium">
-            {{ today_checkins|date:"l" }}
-          </small>
         </div>
-      </div>
+      </a>
     </div>
   </div>
 
   <!-- Recent Activity Section -->
   <div class="row">
     <!-- Recent Employees -->
-    <div class="col-xl-6 col-lg-12 col-md-12 mb-6">
-      <div class="card h-100">
-        <div class="card-header d-flex align-items-center justify-content-between">
-          <h5 class="card-title m-0 me-2">Recent Employees</h5>
-          <div class="dropdown">
-            <button class="btn p-0" type="button" id="recentEmployees" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              <i class="icon-base bx bx-dots-vertical-rounded icon-24px"></i>
-            </button>
-            <div class="dropdown-menu" aria-labelledby="recentEmployees">
-              <a class="dropdown-item" href="{% url 'employees:employee_list' %}">View All</a>
-              <a class="dropdown-item" href="{% url 'employees:employee_create' %}">Add New</a>
-            </div>
+    <div class="col-xl-6 col-lg-12 col-md-12 mb-4">
+      <div class="card h-100 hover-card">
+        <div class="card-header d-flex align-items-center justify-content-between pb-3">
+          <div>
+            <h5 class="card-title m-0 mb-1">Recent Employees</h5>
+            <small class="text-muted">Latest additions to your team</small>
           </div>
+          <a href="{% url 'employees:employee_list' %}" class="btn btn-sm btn-outline-primary">
+            View All <i class="bx bx-chevron-right"></i>
+          </a>
         </div>
         <div class="card-body">
           {% if recent_employees %}
             {% for employee in recent_employees %}
-              <div class="d-flex align-items-center mb-4">
-                <div class="avatar avatar-sm me-3">
-                  {% if employee.profile_picture %}
-                    <img src="{{ employee.profile_picture.url }}" alt="Profile" class="rounded-circle">
-                  {% else %}
-                    <div class="avatar-initial bg-label-primary rounded-circle">
-                      {{ employee.name|first|upper }}
-                    </div>
-                  {% endif %}
+              <a href="{% url 'employees:employee_detail' employee.id %}" class="text-decoration-none">
+                <div class="d-flex align-items-center mb-3 p-2 rounded hover-item">
+                  <div class="avatar avatar-sm me-3">
+                    {% if employee.profile_picture %}
+                      <img src="{{ employee.profile_picture.url }}" alt="Profile" class="rounded-circle">
+                    {% else %}
+                      <div class="avatar-initial bg-label-primary rounded-circle">
+                        {{ employee.name|first|upper }}
+                      </div>
+                    {% endif %}
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-0">{{ employee.name }}</h6>
+                    <small class="text-muted">{{ employee.email }}</small>
+                  </div>
+                  <div class="text-end">
+                    <span class="badge bg-label-success">New</span>
+                    <small class="d-block text-muted mt-1">{{ employee.created_at|timesince }} ago</small>
+                  </div>
                 </div>
-                <div class="flex-grow-1">
-                  <h6 class="mb-0">{{ employee.full_name }}</h6>
-                  <small class="text-muted">{{ employee.email }}</small>
-                </div>
-                <div class="text-end">
-                  <small class="text-muted">{{ employee.created_at|timesince }} ago</small>
-                </div>
-              </div>
+              </a>
             {% endfor %}
           {% else %}
-            <div class="text-center py-4">
-              <i class="icon-base bx bx-user-plus icon-48px text-muted mb-3"></i>
-              <p class="text-muted mb-0">No employees yet</p>
-              <a href="{% url 'employees:employee_create' %}" class="btn btn-primary btn-sm mt-2">Add First Employee</a>
+            <div class="text-center py-5">
+              <i class="bx bx-user-plus" style="font-size: 48px; color: #ddd;"></i>
+              <p class="text-muted mb-3 mt-2">No employees yet</p>
+              <a href="{% url 'employees:employee_create' %}" class="btn btn-primary btn-sm">
+                <i class="bx bx-plus me-1"></i>Add First Employee
+              </a>
             </div>
           {% endif %}
         </div>
@@ -204,46 +206,52 @@
     </div>
 
     <!-- Today's Attendance -->
-    <div class="col-xl-6 col-lg-12 col-md-12 mb-6">
-      <div class="card h-100">
-        <div class="card-header d-flex align-items-center justify-content-between">
-          <h5 class="card-title m-0 me-2">Today's Check-ins</h5>
-          <div class="dropdown">
-            <button class="btn p-0" type="button" id="todayAttendance" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              <i class="icon-base bx bx-dots-vertical-rounded icon-24px"></i>
-            </button>
-            <div class="dropdown-menu" aria-labelledby="todayAttendance">
-              <a class="dropdown-item" href="{% url 'employees:attendance_list' %}">View All</a>
-              <a class="dropdown-item" href="{% url 'employees:attendance_list' %}?date={{ date_today|date:'Y-m-d' }}">Filter Today</a>
-            </div>
+    <div class="col-xl-6 col-lg-12 col-md-12 mb-4">
+      <div class="card h-100 hover-card">
+        <div class="card-header d-flex align-items-center justify-content-between pb-3">
+          <div>
+            <h5 class="card-title m-0 mb-1">Today's Check-ins</h5>
+            <small class="text-muted">Real-time attendance tracking</small>
           </div>
+          <a href="{% url 'employees:attendance_list' %}" class="btn btn-sm btn-outline-success">
+            View All <i class="bx bx-chevron-right"></i>
+          </a>
         </div>
         <div class="card-body">
           {% if today_attendance %}
             {% for attendance in today_attendance %}
-              <div class="d-flex align-items-center mb-4">
-                <div class="avatar avatar-sm me-3">
-                  {% if attendance.employee.profile_picture %}
-                    <img src="{{ attendance.employee.profile_picture.url }}" alt="Profile" class="rounded-circle">
-                  {% else %}
-                    <div class="avatar-initial bg-label-success rounded-circle">
-                      {{ attendance.employee.name|first|upper }}
-                    </div>
-                  {% endif %}
+              <a href="{% url 'employees:employee_detail' attendance.employee.id %}" class="text-decoration-none">
+                <div class="d-flex align-items-center mb-3 p-2 rounded hover-item">
+                  <div class="avatar avatar-sm me-3">
+                    {% if attendance.employee.profile_picture %}
+                      <img src="{{ attendance.employee.profile_picture.url }}" alt="Profile" class="rounded-circle">
+                    {% else %}
+                      <div class="avatar-initial bg-label-success rounded-circle">
+                        {{ attendance.employee.name|first|upper }}
+                      </div>
+                    {% endif %}
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-0">{{ attendance.employee.name }}</h6>
+                    <small class="text-muted">{{ attendance.employee.email }}</small>
+                  </div>
+                  <div class="text-end">
+                    <span class="badge bg-success">
+                      <i class="bx bx-check"></i> {{ attendance.check_in_time|date:"H:i" }}
+                    </span>
+                    {% if attendance.check_out_time %}
+                      <small class="d-block text-muted mt-1">Out: {{ attendance.check_out_time|date:"H:i" }}</small>
+                    {% else %}
+                      <small class="d-block text-warning mt-1">Active</small>
+                    {% endif %}
+                  </div>
                 </div>
-                <div class="flex-grow-1">
-                  <h6 class="mb-0">{{ attendance.employee.full_name }}</h6>
-                  <small class="text-muted">{{ attendance.employee.email }}</small>
-                </div>
-                <div class="text-end">
-                  <small class="text-success fw-medium">{{ attendance.check_in_time|date:"H:i" }}</small>
-                </div>
-              </div>
+              </a>
             {% endfor %}
           {% else %}
-            <div class="text-center py-4">
-              <i class="icon-base bx bx-time-five icon-48px text-muted mb-3"></i>
-              <p class="text-muted mb-0">No check-ins today</p>
+            <div class="text-center py-5">
+              <i class="bx bx-time-five" style="font-size: 48px; color: #ddd;"></i>
+              <p class="text-muted mb-2 mt-2">No check-ins today</p>
               <small class="text-muted">Employees can check-in from their dashboard</small>
             </div>
           {% endif %}
@@ -254,46 +262,71 @@
 
   <!-- Quick Actions -->
   <div class="row">
-    <div class="col-12">
+    <div class="col-12 mb-4">
       <div class="card">
-        <div class="card-header">
-          <h5 class="card-title m-0">Quick Actions</h5>
+        <div class="card-header pb-3">
+          <h5 class="card-title m-0 mb-1">Quick Actions</h5>
+          <small class="text-muted">Frequently used administrative tasks</small>
         </div>
         <div class="card-body">
-          <div class="row">
-            <div class="col-md-3 col-sm-6 mb-4">
+          <div class="row g-3">
+            <div class="col-xl-3 col-md-6 col-sm-6">
               <a href="{% url 'employees:employee_create' %}" class="text-decoration-none">
-                <div class="border rounded p-4 text-center h-100">
-                  <i class="icon-base bx bx-user-plus icon-32px text-primary mb-2"></i>
-                  <h6 class="mb-1">Add Employee</h6>
-                  <small class="text-muted">Create new employee account</small>
+                <div class="card action-card h-100">
+                  <div class="card-body text-center p-4">
+                    <div class="avatar mx-auto mb-3" style="width: 60px; height: 60px;">
+                      <div class="avatar-initial bg-label-primary rounded">
+                        <i class="bx bx-user-plus" style="font-size: 28px;"></i>
+                      </div>
+                    </div>
+                    <h6 class="mb-1">Add Employee</h6>
+                    <small class="text-muted">Create new account</small>
+                  </div>
                 </div>
               </a>
             </div>
-            <div class="col-md-3 col-sm-6 mb-4">
+            <div class="col-xl-3 col-md-6 col-sm-6">
               <a href="{% url 'employees:employee_list' %}" class="text-decoration-none">
-                <div class="border rounded p-4 text-center h-100">
-                  <i class="icon-base bx bx-user-check icon-32px text-success mb-2"></i>
-                  <h6 class="mb-1">Manage Employees</h6>
-                  <small class="text-muted">View and edit employee details</small>
+                <div class="card action-card h-100">
+                  <div class="card-body text-center p-4">
+                    <div class="avatar mx-auto mb-3" style="width: 60px; height: 60px;">
+                      <div class="avatar-initial bg-label-success rounded">
+                        <i class="bx bx-group" style="font-size: 28px;"></i>
+                      </div>
+                    </div>
+                    <h6 class="mb-1">Manage Employees</h6>
+                    <small class="text-muted">View & edit details</small>
+                  </div>
                 </div>
               </a>
             </div>
-            <div class="col-md-3 col-sm-6 mb-4">
-              <a href="{% url 'employees:attendance_list' %}" class="text-decoration-none">
-                <div class="border rounded p-4 text-center h-100">
-                  <i class="icon-base bx bx-time-five icon-32px text-info mb-2"></i>
-                  <h6 class="mb-1">View Attendance</h6>
-                  <small class="text-muted">Check employee check-ins</small>
+            <div class="col-xl-3 col-md-6 col-sm-6">
+              <a href="{% url 'employees:admin_attendance_logs' %}" class="text-decoration-none">
+                <div class="card action-card h-100">
+                  <div class="card-body text-center p-4">
+                    <div class="avatar mx-auto mb-3" style="width: 60px; height: 60px;">
+                      <div class="avatar-initial bg-label-info rounded">
+                        <i class="bx bx-list-ul" style="font-size: 28px;"></i>
+                      </div>
+                    </div>
+                    <h6 class="mb-1">Activity Logs</h6>
+                    <small class="text-muted">View all activities</small>
+                  </div>
                 </div>
               </a>
             </div>
-            <div class="col-md-3 col-sm-6 mb-4">
-              <a href="{% url 'admin:index' %}" class="text-decoration-none">
-                <div class="border rounded p-4 text-center h-100">
-                  <i class="icon-base bx bx-cog icon-32px text-warning mb-2"></i>
-                  <h6 class="mb-1">System Settings</h6>
-                  <small class="text-muted">Access Django admin</small>
+            <div class="col-xl-3 col-md-6 col-sm-6">
+              <a href="{% url 'employees:superadmin_profile' %}" class="text-decoration-none">
+                <div class="card action-card h-100">
+                  <div class="card-body text-center p-4">
+                    <div class="avatar mx-auto mb-3" style="width: 60px; height: 60px;">
+                      <div class="avatar-initial bg-label-warning rounded">
+                        <i class="bx bx-user-circle" style="font-size: 28px;"></i>
+                      </div>
+                    </div>
+                    <h6 class="mb-1">My Profile</h6>
+                    <small class="text-muted">Account settings</small>
+                  </div>
                 </div>
               </a>
             </div>
@@ -304,12 +337,201 @@
   </div>
 {% endblock %}
 
+{% block page_css %}
+<style>
+/* Stat Cards Hover Effect */
+.stat-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.stat-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.stat-card:active {
+  transform: translateY(-4px);
+}
+
+/* Action Cards Hover Effect */
+.action-card {
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.action-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border-color: rgba(103, 126, 234, 0.3);
+}
+
+.action-card:hover .avatar-initial {
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
+}
+
+/* Hover Card Effect */
+.hover-card {
+  transition: all 0.3s ease;
+}
+
+.hover-card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Hover Item Effect */
+.hover-item {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.hover-item:hover {
+  background-color: rgba(103, 126, 234, 0.05);
+  transform: translateX(5px);
+}
+
+/* Gradient Animation */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.bg-gradient-primary {
+  background-size: 200% 200%;
+  animation: gradient 15s ease infinite;
+}
+
+/* Card Entry Animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.stat-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.stat-card:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.stat-card:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.stat-card:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+/* Badge Pulse Animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.badge-success {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Smooth Scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Avatar Hover */
+.avatar:hover {
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
+}
+
+/* Button Enhancements */
+.btn {
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .stat-card:hover {
+    transform: translateY(-4px);
+  }
+  
+  .action-card:hover {
+    transform: translateY(-3px);
+  }
+}
+</style>
+{% endblock %}
+
 {% block page_js %}
   {{ block.super }}
   <script>
-    // Auto refresh dashboard data every 30 seconds
-    setInterval(function() {
-      location.reload();
-    }, 30000);
+    // Smooth animations on load
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add staggered animation to cards
+      const cards = document.querySelectorAll('.card');
+      cards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+      });
+      
+      // Add ripple effect to stat cards
+      const statCards = document.querySelectorAll('.stat-card');
+      statCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+          const ripple = document.createElement('span');
+          ripple.classList.add('ripple');
+          this.appendChild(ripple);
+          
+          const rect = this.getBoundingClientRect();
+          const size = Math.max(rect.width, rect.height);
+          const x = e.clientX - rect.left - size / 2;
+          const y = e.clientY - rect.top - size / 2;
+          
+          ripple.style.width = ripple.style.height = size + 'px';
+          ripple.style.left = x + 'px';
+          ripple.style.top = y + 'px';
+          
+          setTimeout(() => ripple.remove(), 600);
+        });
+      });
+    });
+    
+    // Optional: Remove auto-refresh or increase interval
+    // Uncomment if you want auto-refresh
+    // setInterval(function() {
+    //   location.reload();
+    // }, 60000); // Refresh every 60 seconds instead of 30
   </script>
 {% endblock %}

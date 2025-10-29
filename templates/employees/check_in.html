@@ -3,15 +3,15 @@
 {% load static %}
 {% load i18n %}
 
-{% block title %}Check In | Kwikster CRM{% endblock %}
+{% block title %}Attendance | Kwikster CRM{% endblock %}
 
 {% block content %}
   <div class="row justify-content-center">
     <div class="col-xl-8 col-lg-10 col-md-12">
       <div class="card">
         <div class="card-header text-center">
-          <h5 class="card-title m-0">Daily Check-in</h5>
-          <small class="text-muted">Photo verification required</small>
+          <h5 class="card-title m-0">Attendance Management</h5>
+          <small class="text-muted">Manage your daily check-in and check-out</small>
         </div>
 
         <div class="card-body">
@@ -24,171 +24,180 @@
             {% endfor %}
           {% endif %}
 
-          {% if not has_checked_in_today %}
-            <!-- Photo Verification Instructions -->
-            <div class="alert alert-info mb-4">
-              <i class="icon-base bx bx-camera me-1"></i>
-              <strong>Photo Verification Required:</strong> For security and verification purposes, please capture or upload a photo with your check-in. This photo will be stored with your attendance record.
+          <div class="text-center mb-4">
+            <div class="avatar avatar-xl mb-3 mx-auto">
+              {% if employee.profile_picture %}
+                <img src="{{ employee.profile_picture.url }}" alt="{{ employee.name }}" class="rounded-circle">
+              {% else %}
+                <span class="avatar-initial rounded-circle bg-label-primary">
+                  {{ employee.name|slice:":1"|upper }}
+                </span>
+              {% endif %}
             </div>
+            <h4 class="mb-2">Welcome, {{ employee.name }}!</h4>
+            <p class="text-muted mb-4">
+              Manage your attendance and view your monthly calendar
+            </p>
 
-            <!-- Camera Interface -->
-            <div class="text-center mb-4">
-              <div class="camera-container mb-4">
-                <video id="camera" class="camera-preview" autoplay playsinline muted></video>
-                <canvas id="canvas" class="d-none"></canvas>
-                <div class="camera-overlay d-none">
-                  <div class="camera-frame"></div>
-                </div>
+            {% if today_attendance %}
+              <div class="alert alert-success">
+                <h6 class="alert-heading mb-2">
+                  <i class="icon-base bx bx-check-circle me-1"></i>Today's Attendance
+                </h6>
+                <p class="mb-1">
+                  <strong>Date:</strong> {{ today_attendance.date|date:"d M Y, l" }}
+                </p>
+                <p class="mb-1">
+                  <strong>Check-in Time:</strong> {{ today_attendance.check_in_time|date:"H:i:s" }}
+                </p>
+                {% if today_attendance.check_out_time %}
+                  <p class="mb-0">
+                    <strong>Check-out Time:</strong> {{ today_attendance.check_out_time|date:"H:i:s" }}
+                  </p>
+                {% endif %}
               </div>
+            {% endif %}
 
-              <!-- Camera Controls -->
-              <div class="camera-controls mb-4">
-                <button type="button" id="capture-btn" class="btn btn-success btn-lg me-3" disabled>
-                  <i class="icon-base bx bx-camera me-1"></i>Capture Photo
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-center gap-3 mb-4">
+              {% if not has_checked_in_today %}
+                <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#checkinModal">
+                  <i class="bx bx-log-in me-1"></i>Check In
                 </button>
-                <button type="button" id="retake-btn" class="btn btn-outline-secondary btn-lg d-none">
-                  <i class="icon-base bx bx-refresh me-1"></i>Retake
+              {% elif today_attendance and not today_attendance.check_out_time %}
+                <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#checkoutModal">
+                  <i class="bx bx-log-out me-1"></i>Check Out
                 </button>
-              </div>
-
-              <!-- Photo Preview -->
-              <div id="photo-preview" class="d-none">
-                <div class="photo-container mb-3">
-                  <img id="captured-photo" class="photo-preview" alt="Captured photo">
-                </div>
-                <p class="text-muted small">Photo will be saved with your check-in record</p>
-              </div>
-
-              <!-- Check-in Information -->
-              <div class="row mb-4">
-                <div class="col-md-6">
-                  <div class="border rounded p-3 text-center">
-                    <h6 class="mb-1">Date</h6>
-                    <span class="fw-medium" id="current-date">{{ date_today|date:"l, M d, Y" }}</span>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="border rounded p-3 text-center">
-                    <h6 class="mb-1">Time</h6>
-                    <span class="fw-medium" id="current-time">{{ current_time|time:"H:i:s" }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Hidden form for photo submission -->
-              <form method="post" enctype="multipart/form-data" id="checkin-form">
-                {% csrf_token %}
-                <input type="file" name="check_in_photo" id="photo-input" accept="image/*" class="d-none">
-                <input type="hidden" name="latitude" id="latitude-input">
-                <input type="hidden" name="longitude" id="longitude-input">
-                <div class="d-flex justify-content-center gap-3">
-                  <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-outline-secondary">
-                    <i class="icon-base bx bx-x me-1"></i>Cancel
-                  </a>
-                  <button type="submit" class="btn btn-success btn-lg" id="submit-btn" disabled>
-                    <i class="icon-base bx bx-check-circle me-1"></i>Check In with Photo
-                  </button>
-                </div>
-              </form>
-            </div>
-          {% else %}
-            <!-- Already Checked In -->
-            <div class="text-center mb-4">
-              <div class="avatar avatar-xl mb-3 mx-auto">
-              
-              </div>
-              <h4 class="mb-2">Already Checked In</h4>
-              <p class="text-muted mb-4">
-                You have already checked in today, {{ employee.name }}.
-              </p>
-
-              {% if today_attendance and today_attendance.check_in_photo %}
-                <div class="mb-4">
-                  <h6 class="mb-2">Check-in Photo</h6>
-                  <img src="{{ today_attendance.check_in_photo.url }}" class="checkin-photo-preview" alt="Check-in photo" style="max-width: 200px; border-radius: 8px;">
+              {% else %}
+                <div class="alert alert-info">
+                  <i class="bx bx-info-circle me-1"></i>
+                  You have completed your attendance for today.
                 </div>
               {% endif %}
-
-              {% if today_attendance %}
-                <div class="alert alert-success">
-                  <h6 class="alert-heading mb-2">
-                    <i class="icon-base bx bx-check-circle me-1"></i>Check-in Details
-                  </h6>
-                  <p class="mb-1">
-                    <strong>Date:</strong> {{ today_attendance.date|date:"d M Y, l" }}
-                  </p>
-                  <p class="mb-1">
-                    <strong>Check-in Time:</strong> {{ today_attendance.check_in_time|date:"H:i:s" }}
-                  </p>
-                  {% if today_attendance.check_out_time %}
-                    <p class="mb-0">
-                      <strong>Check-out Time:</strong> {{ today_attendance.check_out_time|date:"H:i:s" }}
-                    </p>
-                  {% else %}
-                    <div class="checkout-section mt-4">
-                      <div class="alert alert-warning border-warning">
-                        <h6 class="alert-heading mb-2">
-                          <i class="icon-base bx bx-log-out-circle me-1"></i> Ready to Check Out?
-                        </h6>
-                        <p class="mb-0 small">Complete your day by checking out with face verification below.</p>
-                      </div>
-
-                      <div class="camera-section checkout-camera-section">
-                        <div class="text-center mb-3">
-                          <div class="camera-container mb-3">
-                            <video id="checkout-camera" class="camera-preview" autoplay playsinline muted style="display: none;"></video>
-                            <canvas id="checkout-canvas" class="d-none"></canvas>
-                          </div>
-
-                          <div class="camera-controls mb-3">
-                            <button type="button" id="checkout-start-btn" class="btn btn-primary btn-lg">
-                              <i class="icon-base bx bx-video me-1"></i>Start Camera for Check-out
-                            </button>
-                            <button type="button" id="checkout-capture-btn" class="btn btn-success btn-lg d-none" disabled>
-                              <i class="icon-base bx bx-camera me-1"></i>Capture Photo
-                            </button>
-                            <button type="button" id="checkout-retake-btn" class="btn btn-outline-secondary btn-lg d-none">
-                              <i class="icon-base bx bx-refresh me-1"></i>Retake
-                            </button>
-                          </div>
-
-                          <div id="checkout-preview" class="d-none mb-3">
-                            <div class="photo-container mb-2">
-                              <img id="checkout-captured-photo" class="photo-preview" alt="Checkout photo">
-                            </div>
-                            <div id="checkout-status" class="text-success fw-medium">
-                              <i class="bx bx-check-circle"></i> Photo captured successfully! Click below to check out.
-                            </div>
-                          </div>
-
-                          <div id="checkout-fallback-container" class="d-none"></div>
-
-                          <form id="checkout-form" method="post" action="{% url 'employees:check_out' %}" enctype="multipart/form-data">
-                            {% csrf_token %}
-                            <input type="file" name="check_out_photo" id="checkout-photo-input" accept="image/*" class="d-none">
-                            <div class="d-flex justify-content-center gap-3">
-                              <button type="submit" class="btn btn-danger btn-lg" id="checkout-submit-btn" disabled>
-                                <i class="icon-base bx bx-log-out me-1"></i> Complete Check-out
-                              </button>
-                            </div>
-                          </form>
-                        </div>
-                      </div>
-                    </div>
-                  {% endif %}
-                </div>
-              {% endif %}
-
-              <div class="d-flex justify-content-center gap-3">
-                <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-primary">
-                  <i class="icon-base bx bx-home me-1"></i>Back to Dashboard
-                </a>
-                <a href="{% url 'employees:employee_profile' %}" class="btn btn-outline-primary">
-                  <i class="icon-base bx bx-user me-1"></i>View Profile
-                </a>
-              </div>
             </div>
-          {% endif %}
+
+            <!-- Navigation Buttons -->
+            <div class="d-flex justify-content-center gap-3">
+              <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-primary">
+                <i class="icon-base bx bx-home me-1"></i>Back to Dashboard
+              </a>
+              <a href="{% url 'employees:employee_profile' %}" class="btn btn-outline-primary">
+                <i class="icon-base bx bx-user me-1"></i>View Profile
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Check-In Modal -->
+  <div class="modal fade" id="checkinModal" tabindex="-1" aria-labelledby="checkinModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title text-white" id="checkinModalLabel">
+            <i class="bx bx-log-in me-2"></i>Check In
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-info">
+            <i class="bx bx-camera me-1"></i>
+            <strong>Photo Verification Required:</strong> Please capture a photo to complete your check-in.
+          </div>
+
+          <div class="text-center">
+            <div class="camera-container mb-3">
+              <video id="checkin-camera" class="camera-preview" autoplay playsinline muted style="display: none;"></video>
+              <canvas id="checkin-canvas" class="d-none"></canvas>
+              <img id="checkin-preview" class="camera-preview d-none" alt="Preview">
+            </div>
+
+            <div class="mb-3">
+              <button type="button" id="checkin-capture-btn" class="btn btn-success btn-lg" disabled>
+                <i class="bx bx-camera me-1"></i>Capture Photo
+              </button>
+              <button type="button" id="checkin-retake-btn" class="btn btn-outline-secondary btn-lg d-none">
+                <i class="bx bx-refresh me-1"></i>Retake
+              </button>
+            </div>
+
+            <div id="checkin-camera-status" class="text-muted small mb-3">
+              <i class="bx bx-loader-alt bx-spin me-1"></i>Initializing camera...
+            </div>
+          </div>
+
+          <form id="checkin-form" method="post" enctype="multipart/form-data" class="d-none">
+            {% csrf_token %}
+            <input type="file" name="check_in_photo" id="checkin-photo-input" accept="image/*" required class="d-none">
+            <input type="hidden" name="latitude" id="checkin-latitude-input">
+            <input type="hidden" name="longitude" id="checkin-longitude-input">
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bx bx-x me-1"></i>Cancel
+          </button>
+          <button type="button" id="checkin-submit-btn" class="btn btn-success" disabled>
+            <i class="bx bx-check-circle me-1"></i>Complete Check-In
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Check-Out Modal -->
+  <div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title text-white" id="checkoutModalLabel">
+            <i class="bx bx-log-out me-2"></i>Check Out
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-info">
+            <i class="bx bx-camera me-1"></i>
+            <strong>Photo Verification Required:</strong> Please capture a photo to complete your check-out.
+          </div>
+
+          <div class="text-center">
+            <div class="camera-container mb-3">
+              <video id="checkout-camera" class="camera-preview" autoplay playsinline muted style="display: none;"></video>
+              <canvas id="checkout-canvas" class="d-none"></canvas>
+              <img id="checkout-preview" class="camera-preview d-none" alt="Preview">
+            </div>
+
+            <div class="mb-3">
+              <button type="button" id="checkout-capture-btn" class="btn btn-danger btn-lg" disabled>
+                <i class="bx bx-camera me-1"></i>Capture Photo
+              </button>
+              <button type="button" id="checkout-retake-btn" class="btn btn-outline-secondary btn-lg d-none">
+                <i class="bx bx-refresh me-1"></i>Retake
+              </button>
+            </div>
+
+            <div id="checkout-camera-status" class="text-muted small mb-3">
+              <i class="bx bx-loader-alt bx-spin me-1"></i>Initializing camera...
+            </div>
+          </div>
+
+          <form id="checkout-form" method="post" action="{% url 'employees:check_out' %}" enctype="multipart/form-data" class="d-none">
+            {% csrf_token %}
+            <input type="file" name="check_out_photo" id="checkout-photo-input" accept="image/*" required class="d-none">
+            <input type="hidden" name="latitude" id="checkout-latitude-input">
+            <input type="hidden" name="longitude" id="checkout-longitude-input">
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bx bx-x me-1"></i>Cancel
+          </button>
+          <button type="button" id="checkout-submit-btn" class="btn btn-danger" disabled>
+            <i class="bx bx-log-out me-1"></i>Complete Check-Out
+          </button>
         </div>
       </div>
     </div>
@@ -198,453 +207,531 @@
 {% block page_js %}
   {{ block.super }}
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const camera = document.getElementById('camera');
-      const canvas = document.getElementById('canvas');
-      const captureBtn = document.getElementById('capture-btn');
-      const retakeBtn = document.getElementById('retake-btn');
-      const submitBtn = document.getElementById('submit-btn');
-      const photoInput = document.getElementById('photo-input');
-      const photoPreview = document.getElementById('photo-preview');
-      const capturedPhoto = document.getElementById('captured-photo');
-      const checkinForm = document.getElementById('checkin-form');
-      const latitudeInput = document.getElementById('latitude-input');
-      const longitudeInput = document.getElementById('longitude-input');
-
-      // Get user's current location
-      function getUserLocation() {
+document.addEventListener('DOMContentLoaded', function() {
+    // ===========================
+    // CHECK-IN MODAL FUNCTIONALITY
+    // ===========================
+    const checkinModal = document.getElementById('checkinModal');
+    const checkinCamera = document.getElementById('checkin-camera');
+    const checkinCanvas = document.getElementById('checkin-canvas');
+    const checkinPreview = document.getElementById('checkin-preview');
+    const checkinCaptureBtn = document.getElementById('checkin-capture-btn');
+    const checkinRetakeBtn = document.getElementById('checkin-retake-btn');
+    const checkinSubmitBtn = document.getElementById('checkin-submit-btn');
+    const checkinForm = document.getElementById('checkin-form');
+    const checkinPhotoInput = document.getElementById('checkin-photo-input');
+    const checkinCameraStatus = document.getElementById('checkin-camera-status');
+    const checkinLatitudeInput = document.getElementById('checkin-latitude-input');
+    const checkinLongitudeInput = document.getElementById('checkin-longitude-input');
+    
+    let checkinStream = null;
+    let checkinPhotoBlob = null;
+    
+    // Get user's current location for check-in
+    function getCheckinLocation() {
         return new Promise((resolve, reject) => {
-          if (!navigator.geolocation) {
-            reject(new Error('Geolocation is not supported by your browser'));
+            if (!navigator.geolocation) {
+                reject(new Error('Geolocation is not supported by your browser'));
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    resolve({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    });
+                },
+                (error) => {
+                    let errorMessage = 'Unable to retrieve your location';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = 'Location access denied. Please enable location services.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = 'Location information is unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage = 'Location request timed out.';
+                            break;
+                    }
+                    reject(new Error(errorMessage));
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        });
+    }
+    
+    // Initialize camera when modal is shown
+    if (checkinModal) {
+        checkinModal.addEventListener('shown.bs.modal', function() {
+            // Get location first
+            getCheckinLocation()
+                .then(coords => {
+                    checkinLatitudeInput.value = coords.latitude;
+                    checkinLongitudeInput.value = coords.longitude;
+                    console.log('Check-in location obtained:', coords);
+                    initCheckinCamera();
+                })
+                .catch(error => {
+                    console.error('Location error:', error);
+                    checkinCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>' + error.message;
+                    checkinCaptureBtn.disabled = true;
+                    alert(error.message + '\n\nLocation access is required for check-in. Please close this modal, enable location services, and try again.');
+                });
+        });
+        
+        checkinModal.addEventListener('hidden.bs.modal', function() {
+            stopCheckinCamera();
+            resetCheckinModal();
+        });
+    }
+    
+    async function initCheckinCamera() {
+        console.log('Initializing check-in camera...');
+        
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.error('MediaDevices API not supported');
+            checkinCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>Camera not supported on this device';
+            checkinCaptureBtn.disabled = true;
             return;
-          }
-
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              resolve({
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude
-              });
-            },
-            (error) => {
-              let errorMessage = 'Unable to retrieve your location';
-              switch(error.code) {
-                case error.PERMISSION_DENIED:
-                  errorMessage = 'Location access denied. Please enable location services.';
-                  break;
-                case error.POSITION_UNAVAILABLE:
-                  errorMessage = 'Location information is unavailable.';
-                  break;
-                case error.TIMEOUT:
-                  errorMessage = 'Location request timed out.';
-                  break;
-              }
-              reject(new Error(errorMessage));
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 0
-            }
-          );
-        });
-      }
-
-      // Request location on page load (only if form exists)
-      if (latitudeInput && longitudeInput) {
-        getUserLocation()
-          .then(coords => {
-            latitudeInput.value = coords.latitude;
-            longitudeInput.value = coords.longitude;
-            console.log('Location obtained:', coords);
-          })
-          .catch(error => {
-            console.error('Location error:', error);
-            alert(error.message + '\n\nLocation access is required for check-in. Please enable location services in your browser settings and reload the page.');
-          });
-      }
-
-      // Checkout elements
-      const checkoutCamera = document.getElementById('checkout-camera');
-      const checkoutCanvas = document.getElementById('checkout-canvas');
-      const checkoutStartBtn = document.getElementById('checkout-start-btn');
-      const checkoutCaptureBtn = document.getElementById('checkout-capture-btn');
-      const checkoutRetakeBtn = document.getElementById('checkout-retake-btn');
-      const checkoutPreview = document.getElementById('checkout-preview');
-      const checkoutCapturedPhoto = document.getElementById('checkout-captured-photo');
-      const checkoutStatus = document.getElementById('checkout-status');
-      const checkoutForm = document.getElementById('checkout-form');
-      const checkoutPhotoInput = document.getElementById('checkout-photo-input');
-      const checkoutSubmitBtn = document.getElementById('checkout-submit-btn');
-      const checkoutFallbackContainer = document.getElementById('checkout-fallback-container');
-
-      let stream = null;
-      let capturedImageData = null;
-      let checkoutStream = null;
-      let checkoutImageData = null;
-
-      // Initialize camera
-      async function initCamera() {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 640 },
-              height: { ideal: 480 },
-              facingMode: 'user'
-            },
-            audio: false
-          });
-
-          camera.srcObject = stream;
-          camera.style.display = 'block';
-          captureBtn.disabled = false;
-          captureBtn.innerHTML = '<i class="icon-base bx bx-camera me-1"></i>Capture Photo';
-
-        } catch (error) {
-          console.error('Camera access denied or not available:', error);
-          captureBtn.innerHTML = '<i class="icon-base bx bx-error me-1"></i>Camera Not Available';
-          captureBtn.disabled = true;
-
-          // Show upload option as fallback
-          showUploadOption();
         }
-      }
-
-      // Show upload option as fallback
-      function showUploadOption() {
-        const uploadOption = document.createElement('div');
-        uploadOption.className = 'mt-3';
-        uploadOption.innerHTML = `
-          <div class="alert alert-warning">
-            <i class="icon-base bx bx-camera me-1"></i>
-            <strong>Photo Verification:</strong> Please capture or upload a photo for your check-in record. This helps verify your attendance.
-          </div>
-          <div class="mb-3">
-            <label for="photo-upload" class="form-label">Upload Photo</label>
-            <input type="file" class="form-control" id="photo-upload" accept="image/*" required>
-          </div>
-        `;
-        camera.parentNode.appendChild(uploadOption);
-
-        const photoUpload = document.getElementById('photo-upload');
-        photoUpload.addEventListener('change', function(e) {
-          if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = function(e) {
-              capturedPhoto.src = e.target.result;
-              photoPreview.classList.remove('d-none');
-              retakeBtn.classList.remove('d-none');
-              submitBtn.disabled = false;
-              capturedImageData = e.target.result;
-            };
-            reader.readAsDataURL(file);
-          }
-        });
-      }
-
-      // Capture photo
-      function capturePhoto() {
-        const context = canvas.getContext('2d');
-        canvas.width = camera.videoWidth;
-        canvas.height = camera.videoHeight;
-
-        context.drawImage(camera, 0, 0, canvas.width, canvas.height);
-
-        capturedImageData = canvas.toDataURL('image/jpeg', 0.8);
-        capturedPhoto.src = capturedImageData;
-
-        // Show preview
-        camera.style.display = 'none';
-        photoPreview.classList.remove('d-none');
-        captureBtn.classList.add('d-none');
-        retakeBtn.classList.remove('d-none');
-        submitBtn.disabled = false;
-      }
-
-      // Retake photo
-      function retakePhoto() {
-        camera.style.display = 'block';
-        photoPreview.classList.add('d-none');
-        captureBtn.classList.remove('d-none');
-        retakeBtn.classList.add('d-none');
-        submitBtn.disabled = true;
-        capturedImageData = null;
-      }
-
-      // Submit form with photo data
-      function submitForm() {
-        if (capturedImageData) {
-          // Convert data URL to blob and create file
-          fetch(capturedImageData)
-            .then(res => res.blob())
-            .then(blob => {
-              const file = new File([blob], 'checkin-photo.jpg', { type: 'image/jpeg' });
-              const dt = new DataTransfer();
-              dt.items.add(file);
-              photoInput.files = dt.files;
-            })
-            .then(() => {
-              checkinForm.submit();
-            });
-        } else {
-          // No photo, just submit
-          checkinForm.submit();
-        }
-      }
-
-      // Event listeners for check-in (only if elements exist)
-      if (captureBtn) {
-        captureBtn.addEventListener('click', capturePhoto);
-      }
-      
-      if (retakeBtn) {
-        retakeBtn.addEventListener('click', retakePhoto);
-      }
-      
-      if (checkinForm) {
-        checkinForm.addEventListener('submit', function(e) {
-          // Ensure photo data is set before submission
-          if (capturedImageData) {
-            e.preventDefault();
-            submitForm();
-          }
-          // If no photo data, let form submit normally
-        });
-      }
-
-      // Auto refresh current time and date
-      function updateDateTime() {
-        const now = new Date();
-        const dateElement = document.getElementById('current-date');
-        const timeElement = document.getElementById('current-time');
-
-        if (dateElement) {
-          dateElement.textContent = now.toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          });
-        }
-
-        if (timeElement) {
-          timeElement.textContent = now.toLocaleTimeString('en-US', {
-            hour12: false
-          });
-        }
-      }
-
-      // Initialize camera on page load (only if camera element exists)
-      if (camera) {
-        initCamera();
-      }
-
-      // Update time every second
-      setInterval(updateDateTime, 1000);
-
-      // -----------------------------
-      // Checkout camera functionality
-      // -----------------------------
-      function showCheckoutFallback() {
-        if (!checkoutFallbackContainer) return;
-        checkoutFallbackContainer.classList.remove('d-none');
-        checkoutFallbackContainer.innerHTML = `
-          <div class="alert alert-warning">
-            <i class="icon-base bx bx-camera-off me-1"></i>
-            Camera unavailable. You may upload a clear photo instead.
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Upload Checkout Photo</label>
-            <input type="file" class="form-control" id="checkout-photo-upload" accept="image/*" required>
-          </div>
-        `;
-
-        const checkoutUploadInput = document.getElementById('checkout-photo-upload');
-        if (checkoutUploadInput) {
-          checkoutUploadInput.addEventListener('change', function(e) {
-            if (e.target.files && e.target.files[0]) {
-              const file = e.target.files[0];
-              const reader = new FileReader();
-              reader.onload = function(evt) {
-                checkoutImageData = evt.target.result;
-                checkoutCapturedPhoto.src = checkoutImageData;
-                checkoutPreview.classList.remove('d-none');
-                checkoutSubmitBtn.disabled = false;
-              };
-              reader.readAsDataURL(file);
-            }
-          });
-        }
-      }
-
-      async function initCheckoutCamera() {
-        if (!checkoutCamera) {
-          console.error('Checkout camera element not found!');
-          return;
-        }
+        
+        checkinCameraStatus.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Requesting camera access...';
         
         try {
-          checkoutStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 640 },
-              height: { ideal: 480 },
-              facingMode: 'user'
-            },
-            audio: false
-          });
-
-          checkoutCamera.srcObject = checkoutStream;
-          checkoutCamera.style.display = 'block';
-          checkoutCaptureBtn.disabled = false;
-          
-          if (checkoutStatus) {
-            checkoutStatus.innerHTML = '<i class="bx bx-camera"></i> Camera ready! Position your face in the frame and capture.';
-            checkoutStatus.className = 'text-success fw-medium';
-          }
-        } catch (error) {
-          console.error('Checkout camera error:', error.name, error.message);
-          
-          if (checkoutStatus) {
-            checkoutStatus.innerHTML = '<i class="bx bx-error-circle"></i> Camera not available: ' + error.message + '. Please use the upload option below.';
-            checkoutStatus.className = 'text-danger fw-medium';
-          }
-          
-          checkoutCaptureBtn.disabled = true;
-          checkoutStartBtn.classList.remove('d-none');
-          checkoutCaptureBtn.classList.add('d-none');
-          showCheckoutFallback();
-        }
-      }
-
-      function captureCheckoutPhoto() {
-        if (!checkoutCanvas || !checkoutCamera) return;
-        
-        const context = checkoutCanvas.getContext('2d');
-        checkoutCanvas.width = checkoutCamera.videoWidth;
-        checkoutCanvas.height = checkoutCamera.videoHeight;
-
-        context.drawImage(checkoutCamera, 0, 0, checkoutCanvas.width, checkoutCanvas.height);
-
-        checkoutImageData = checkoutCanvas.toDataURL('image/jpeg', 0.8);
-        checkoutCapturedPhoto.src = checkoutImageData;
-        
-        // Hide camera and show preview
-        checkoutCamera.style.display = 'none';
-        checkoutPreview.classList.remove('d-none');
-        checkoutCaptureBtn.classList.add('d-none');
-        checkoutRetakeBtn.classList.remove('d-none');
-        checkoutSubmitBtn.disabled = false;
-        
-        if (checkoutStatus) {
-          checkoutStatus.innerHTML = '<i class="bx bx-check-circle"></i> Photo captured successfully! Click below to check out.';
-          checkoutStatus.className = 'text-success fw-medium';
-        }
-
-        // Stop camera stream to free resources
-        if (checkoutStream) {
-          checkoutStream.getTracks().forEach(track => track.stop());
-          checkoutStream = null;
-        }
-      }
-
-      function retakeCheckoutPhoto() {
-        checkoutImageData = null;
-        checkoutPreview.classList.add('d-none');
-        checkoutSubmitBtn.disabled = true;
-        checkoutCaptureBtn.classList.remove('d-none');
-        checkoutCaptureBtn.classList.add('d-none');
-        checkoutRetakeBtn.classList.add('d-none');
-        checkoutStartBtn.classList.remove('d-none');
-        
-        if (checkoutStatus) {
-          checkoutStatus.innerHTML = '<i class="bx bx-info-circle"></i> Click "Start Camera" to capture a new photo.';
-          checkoutStatus.className = 'text-info fw-medium';
-        }
-      }
-
-      function submitCheckoutForm(e) {
-        e.preventDefault();
-        
-        if (!checkoutImageData) {
-          if (checkoutStatus) {
-            checkoutStatus.innerHTML = '<i class="bx bx-error-circle"></i> Please capture or upload a photo before submitting.';
-            checkoutStatus.className = 'text-danger fw-medium';
-          }
-          return;
-        }
-
-        // Show loading state
-        checkoutSubmitBtn.disabled = true;
-        checkoutSubmitBtn.innerHTML = '<i class="bx bx-loader bx-spin me-1"></i> Verifying face...';
-        
-        if (checkoutStatus) {
-          checkoutStatus.innerHTML = '<i class="bx bx-loader bx-spin"></i> Processing check-out... Please wait.';
-          checkoutStatus.className = 'text-info fw-medium';
-        }
-
-        // Convert image data to file and submit
-        fetch(checkoutImageData)
-          .then(res => res.blob())
-          .then(blob => {
-            const file = new File([blob], 'checkout-photo.jpg', { type: 'image/jpeg' });
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            checkoutPhotoInput.files = dt.files;
-            checkoutForm.submit();
-          })
-          .catch(error => {
-            console.error('Error submitting checkout form:', error);
-            checkoutSubmitBtn.disabled = false;
-            checkoutSubmitBtn.innerHTML = '<i class="icon-base bx bx-log-out me-1"></i> Complete Check-out';
+            // First, try with ideal constraints
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+            } catch (e) {
+                console.warn('Failed with ideal constraints, trying basic:', e);
+                // Fallback to basic constraints
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true
+                });
+            }
             
-            if (checkoutStatus) {
-              checkoutStatus.innerHTML = '<i class="bx bx-error-circle"></i> Error processing photo. Please try again.';
-              checkoutStatus.className = 'text-danger fw-medium';
+            console.log('Check-in camera stream obtained:', stream);
+            console.log('Video tracks:', stream.getVideoTracks());
+            
+            checkinStream = stream;
+            checkinCamera.srcObject = stream;
+            checkinCamera.style.display = 'block';
+            
+            // Force play immediately
+            try {
+                await checkinCamera.play();
+                console.log('Check-in camera playing');
+                checkinCaptureBtn.disabled = false;
+                checkinCameraStatus.innerHTML = '<i class="bx bx-check-circle me-1 text-success"></i>Camera ready';
+            } catch (playError) {
+                console.error('Error playing camera:', playError);
+                // Try one more time after a short delay
+                setTimeout(async () => {
+                    try {
+                        await checkinCamera.play();
+                        checkinCaptureBtn.disabled = false;
+                        checkinCameraStatus.innerHTML = '<i class="bx bx-check-circle me-1 text-success"></i>Camera ready';
+                    } catch (e) {
+                        checkinCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>Error starting camera';
+                    }
+                }, 500);
             }
-          });
-      }
-
-      // Checkout camera event listeners
-      if (checkoutStartBtn) {
-        checkoutStartBtn.addEventListener('click', function() {
-          // Disable button to prevent double clicks
-          checkoutStartBtn.disabled = true;
-          checkoutStartBtn.innerHTML = '<i class="bx bx-loader bx-spin me-1"></i> Starting camera...';
-          
-          // Hide start button, show capture button
-          checkoutStartBtn.classList.add('d-none');
-          checkoutCaptureBtn.classList.remove('d-none');
-          
-          if (checkoutStatus) {
-            checkoutStatus.innerHTML = '<i class="bx bx-loader bx-spin"></i> Requesting camera access...';
-            checkoutStatus.className = 'text-info fw-medium';
-            checkoutStatus.classList.remove('d-none');
-          }
-          
-          initCheckoutCamera();
-        });
-      }
-      
-      if (checkoutCaptureBtn) {
-        checkoutCaptureBtn.addEventListener('click', captureCheckoutPhoto);
-      }
-      
-      if (checkoutRetakeBtn) {
-        checkoutRetakeBtn.addEventListener('click', retakeCheckoutPhoto);
-      }
-      
-      if (checkoutForm) {
-        checkoutForm.addEventListener('submit', submitCheckoutForm);
-      }
-
-      // Cleanup camera stream on page unload
-      window.addEventListener('beforeunload', function() {
-        if (checkoutStream) {
-          checkoutStream.getTracks().forEach(track => track.stop());
+        } catch (error) {
+            console.error('Camera error:', error.name, error.message, error);
+            let errorMsg = 'Camera access denied or not available';
+            
+            if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                errorMsg = 'Camera permission denied. Please reload the page and allow camera access.';
+            } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                errorMsg = 'No camera found on this device.';
+            } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+                errorMsg = 'Camera is already in use. Please close other tabs/apps using the camera.';
+            } else if (error.name === 'OverconstrainedError') {
+                errorMsg = 'Camera constraints cannot be satisfied.';
+            } else if (error.name === 'SecurityError') {
+                errorMsg = 'Camera access blocked by security settings.';
+            }
+            
+            checkinCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>' + errorMsg;
+            checkinCaptureBtn.disabled = true;
+            alert('Camera Error: ' + errorMsg + '\n\nPlease check your browser settings and try again.');
         }
-      });
-    });
+    }
+    
+    function stopCheckinCamera() {
+        if (checkinStream) {
+            checkinStream.getTracks().forEach(track => track.stop());
+            checkinStream = null;
+        }
+    }
+    
+    function resetCheckinModal() {
+        checkinCamera.style.display = 'none';
+        checkinPreview.classList.add('d-none');
+        checkinCaptureBtn.classList.remove('d-none');
+        checkinRetakeBtn.classList.add('d-none');
+        checkinSubmitBtn.disabled = true;
+        checkinPhotoBlob = null;
+        // Clear location values
+        checkinLatitudeInput.value = '';
+        checkinLongitudeInput.value = '';
+        checkinCameraStatus.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Initializing camera...';
+    }
+    
+    // Capture photo
+    if (checkinCaptureBtn) {
+        checkinCaptureBtn.addEventListener('click', function() {
+            const context = checkinCanvas.getContext('2d');
+            checkinCanvas.width = checkinCamera.videoWidth;
+            checkinCanvas.height = checkinCamera.videoHeight;
+            context.drawImage(checkinCamera, 0, 0);
+            
+            checkinCanvas.toBlob(function(blob) {
+                checkinPhotoBlob = blob;
+                const url = URL.createObjectURL(blob);
+                checkinPreview.src = url;
+                
+                // Hide camera, show preview
+                checkinCamera.style.display = 'none';
+                checkinPreview.classList.remove('d-none');
+                checkinCaptureBtn.classList.add('d-none');
+                checkinRetakeBtn.classList.remove('d-none');
+                checkinSubmitBtn.disabled = false;
+                checkinCameraStatus.innerHTML = '<i class="bx bx-check-circle me-1 text-success"></i>Photo captured successfully';
+                
+                // Stop camera
+                stopCheckinCamera();
+            }, 'image/jpeg', 0.8);
+        });
+    }
+    
+    // Retake photo
+    if (checkinRetakeBtn) {
+        checkinRetakeBtn.addEventListener('click', function() {
+            checkinPreview.classList.add('d-none');
+            checkinCamera.style.display = 'block';
+            checkinCaptureBtn.classList.remove('d-none');
+            checkinRetakeBtn.classList.add('d-none');
+            checkinSubmitBtn.disabled = true;
+            checkinPhotoBlob = null;
+            initCheckinCamera();
+        });
+    }
+    
+    // Submit check-in
+    if (checkinSubmitBtn) {
+        checkinSubmitBtn.addEventListener('click', function() {
+            console.log('Check-in submit clicked');
+            console.log('Photo blob:', checkinPhotoBlob);
+            console.log('Latitude:', checkinLatitudeInput.value);
+            console.log('Longitude:', checkinLongitudeInput.value);
+            
+            if (!checkinPhotoBlob) {
+                alert('Please capture a photo first');
+                return;
+            }
+            
+            // Validate location coordinates are present
+            if (!checkinLatitudeInput.value || !checkinLongitudeInput.value) {
+                console.error('Location validation failed - coordinates missing');
+                alert('Location access is required for check-in. Please enable location services and try again.');
+                return;
+            }
+            
+            // Create file from blob
+            const file = new File([checkinPhotoBlob], 'checkin_photo.jpg', { type: 'image/jpeg' });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            checkinPhotoInput.files = dataTransfer.files;
+            
+            console.log('Submitting check-in form with location:', {
+                latitude: checkinLatitudeInput.value,
+                longitude: checkinLongitudeInput.value
+            });
+            
+            // Disable button and show loading
+            checkinSubmitBtn.disabled = true;
+            checkinSubmitBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Processing...';
+            
+            // Submit form
+            checkinForm.submit();
+        });
+    }
+
+    // ===========================
+    // CHECK-OUT MODAL FUNCTIONALITY
+    // ===========================
+    const checkoutModal = document.getElementById('checkoutModal');
+    const checkoutCamera = document.getElementById('checkout-camera');
+    const checkoutCanvas = document.getElementById('checkout-canvas');
+    const checkoutPreview = document.getElementById('checkout-preview');
+    const checkoutCaptureBtn = document.getElementById('checkout-capture-btn');
+    const checkoutRetakeBtn = document.getElementById('checkout-retake-btn');
+    const checkoutSubmitBtn = document.getElementById('checkout-submit-btn');
+    const checkoutForm = document.getElementById('checkout-form');
+    const checkoutPhotoInput = document.getElementById('checkout-photo-input');
+    const checkoutCameraStatus = document.getElementById('checkout-camera-status');
+    const checkoutLatitudeInput = document.getElementById('checkout-latitude-input');
+    const checkoutLongitudeInput = document.getElementById('checkout-longitude-input');
+    
+    let checkoutStream = null;
+    let checkoutPhotoBlob = null;
+    
+    // Get user's current location for checkout
+    function getCheckoutLocation() {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error('Geolocation is not supported by your browser'));
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    resolve({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    });
+                },
+                (error) => {
+                    let errorMessage = 'Unable to retrieve your location';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = 'Location access denied. Please enable location services.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = 'Location information is unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage = 'Location request timed out.';
+                            break;
+                    }
+                    reject(new Error(errorMessage));
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        });
+    }
+    
+    // Initialize camera when modal is shown
+    if (checkoutModal) {
+        checkoutModal.addEventListener('shown.bs.modal', function() {
+            // Get location first
+            getCheckoutLocation()
+                .then(coords => {
+                    checkoutLatitudeInput.value = coords.latitude;
+                    checkoutLongitudeInput.value = coords.longitude;
+                    console.log('Checkout location obtained:', coords);
+                    initCheckoutCamera();
+                })
+                .catch(error => {
+                    console.error('Location error:', error);
+                    checkoutCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>' + error.message;
+                    checkoutCaptureBtn.disabled = true;
+                    alert(error.message + '\n\nLocation access is required for check-out. Please close this modal, enable location services, and try again.');
+                });
+        });
+        
+        checkoutModal.addEventListener('hidden.bs.modal', function() {
+            stopCheckoutCamera();
+            resetCheckoutModal();
+        });
+    }
+    
+    async function initCheckoutCamera() {
+        console.log('Initializing checkout camera...');
+        
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.error('MediaDevices API not supported');
+            checkoutCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>Camera not supported on this device';
+            checkoutCaptureBtn.disabled = true;
+            return;
+        }
+        
+        checkoutCameraStatus.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Requesting camera access...';
+        
+        try {
+            // First, try with ideal constraints
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+            } catch (e) {
+                console.warn('Failed with ideal constraints, trying basic:', e);
+                // Fallback to basic constraints
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true
+                });
+            }
+            
+            console.log('Checkout camera stream obtained:', stream);
+            console.log('Video tracks:', stream.getVideoTracks());
+            
+            checkoutStream = stream;
+            checkoutCamera.srcObject = stream;
+            checkoutCamera.style.display = 'block';
+            
+            // Force play immediately
+            try {
+                await checkoutCamera.play();
+                console.log('Checkout camera playing');
+                checkoutCaptureBtn.disabled = false;
+                checkoutCameraStatus.innerHTML = '<i class="bx bx-check-circle me-1 text-success"></i>Camera ready';
+            } catch (playError) {
+                console.error('Error playing camera:', playError);
+                // Try one more time after a short delay
+                setTimeout(async () => {
+                    try {
+                        await checkoutCamera.play();
+                        checkoutCaptureBtn.disabled = false;
+                        checkoutCameraStatus.innerHTML = '<i class="bx bx-check-circle me-1 text-success"></i>Camera ready';
+                    } catch (e) {
+                        checkoutCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>Error starting camera';
+                    }
+                }, 500);
+            }
+        } catch (error) {
+            console.error('Camera error:', error.name, error.message, error);
+            let errorMsg = 'Camera access denied or not available';
+            
+            if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                errorMsg = 'Camera permission denied. Please reload the page and allow camera access.';
+            } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                errorMsg = 'No camera found on this device.';
+            } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+                errorMsg = 'Camera is already in use. Please close other tabs/apps using the camera.';
+            } else if (error.name === 'OverconstrainedError') {
+                errorMsg = 'Camera constraints cannot be satisfied.';
+            } else if (error.name === 'SecurityError') {
+                errorMsg = 'Camera access blocked by security settings.';
+            }
+            
+            checkoutCameraStatus.innerHTML = '<i class="bx bx-error-circle me-1 text-danger"></i>' + errorMsg;
+            checkoutCaptureBtn.disabled = true;
+            alert('Camera Error: ' + errorMsg + '\n\nPlease check your browser settings and try again.');
+        }
+    }
+    
+    function stopCheckoutCamera() {
+        if (checkoutStream) {
+            checkoutStream.getTracks().forEach(track => track.stop());
+            checkoutStream = null;
+        }
+    }
+    
+    function resetCheckoutModal() {
+        checkoutCamera.style.display = 'none';
+        checkoutPreview.classList.add('d-none');
+        checkoutCaptureBtn.classList.remove('d-none');
+        checkoutRetakeBtn.classList.add('d-none');
+        checkoutSubmitBtn.disabled = true;
+        checkoutPhotoBlob = null;
+        // Clear location values
+        checkoutLatitudeInput.value = '';
+        checkoutLongitudeInput.value = '';
+        checkoutCameraStatus.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Initializing camera...';
+    }
+    
+    // Capture photo
+    if (checkoutCaptureBtn) {
+        checkoutCaptureBtn.addEventListener('click', function() {
+            const context = checkoutCanvas.getContext('2d');
+            checkoutCanvas.width = checkoutCamera.videoWidth;
+            checkoutCanvas.height = checkoutCamera.videoHeight;
+            context.drawImage(checkoutCamera, 0, 0);
+            
+            checkoutCanvas.toBlob(function(blob) {
+                checkoutPhotoBlob = blob;
+                const url = URL.createObjectURL(blob);
+                checkoutPreview.src = url;
+                
+                // Hide camera, show preview
+                checkoutCamera.style.display = 'none';
+                checkoutPreview.classList.remove('d-none');
+                checkoutCaptureBtn.classList.add('d-none');
+                checkoutRetakeBtn.classList.remove('d-none');
+                checkoutSubmitBtn.disabled = false;
+                checkoutCameraStatus.innerHTML = '<i class="bx bx-check-circle me-1 text-success"></i>Photo captured successfully';
+                
+                // Stop camera
+                stopCheckoutCamera();
+            }, 'image/jpeg', 0.8);
+        });
+    }
+    
+    // Retake photo
+    if (checkoutRetakeBtn) {
+        checkoutRetakeBtn.addEventListener('click', function() {
+            checkoutPreview.classList.add('d-none');
+            checkoutCamera.style.display = 'block';
+            checkoutCaptureBtn.classList.remove('d-none');
+            checkoutRetakeBtn.classList.add('d-none');
+            checkoutSubmitBtn.disabled = true;
+            checkoutPhotoBlob = null;
+            initCheckoutCamera();
+        });
+    }
+    
+    // Submit check-out
+    if (checkoutSubmitBtn) {
+        checkoutSubmitBtn.addEventListener('click', function() {
+            console.log('Check-out submit clicked');
+            console.log('Photo blob:', checkoutPhotoBlob);
+            console.log('Latitude:', checkoutLatitudeInput.value);
+            console.log('Longitude:', checkoutLongitudeInput.value);
+            
+            if (!checkoutPhotoBlob) {
+                alert('Please capture a photo first');
+                return;
+            }
+            
+            // Validate location coordinates are present
+            if (!checkoutLatitudeInput.value || !checkoutLongitudeInput.value) {
+                console.error('Location validation failed - coordinates missing');
+                alert('Location access is required for check-out. Please enable location services and try again.');
+                return;
+            }
+            
+            // Create file from blob
+            const file = new File([checkoutPhotoBlob], 'checkout_photo.jpg', { type: 'image/jpeg' });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            checkoutPhotoInput.files = dataTransfer.files;
+            
+            console.log('Submitting check-out form with location:', {
+                latitude: checkoutLatitudeInput.value,
+                longitude: checkoutLongitudeInput.value
+            });
+            
+            // Disable button and show loading
+            checkoutSubmitBtn.disabled = true;
+            checkoutSubmitBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Processing...';
+            
+            // Submit form
+            checkoutForm.submit();
+        });
+    }
+});
   </script>
 {% endblock %}
 
@@ -663,62 +750,18 @@
     .camera-container {
       position: relative;
       display: inline-block;
-    }
-
-    .camera-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
       width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    .camera-frame {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 200px;
-      height: 200px;
-      border: 2px solid rgba(255, 255, 255, 0.8);
-      border-radius: 50%;
-      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-    }
-
-    .photo-preview {
-      max-width: 100%;
-      max-height: 300px;
-      border-radius: 12px;
-      border: 2px solid #e9ecef;
-    }
-
-    .checkin-photo-preview {
-      max-width: 200px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .camera-controls {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    #capture-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+      max-width: 500px;
     }
 
     @media (max-width: 768px) {
-      .camera-controls {
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-
       .camera-preview {
         max-width: 100%;
+        border-radius: 8px;
+      }
+
+      .modal-lg {
+        max-width: 95%;
       }
     }
   </style>

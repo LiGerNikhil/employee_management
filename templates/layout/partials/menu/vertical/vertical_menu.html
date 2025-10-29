@@ -43,10 +43,17 @@
         </a>
       </li>
 
-      <li class="menu-item {% if '/attendance/' in request.path and '/attendance-logs/' not in request.path %}active{% endif %}">
+      <li class="menu-item {% if '/attendance/' in request.path and '/attendance-logs/' not in request.path and '/admin-calendar/' not in request.path %}active{% endif %}">
         <a href="{% url 'employees:attendance_list' %}" class="menu-link">
           <i class="menu-icon icon-base bx bx-time-five"></i>
-          <div class="text-truncate">Attendance</div>
+          <div class="text-truncate">Attendance List</div>
+        </a>
+      </li>
+
+      <li class="menu-item {% if '/admin-calendar/' in request.path %}active{% endif %}">
+        <a href="{% url 'employees:admin_attendance_calendar' %}" class="menu-link">
+          <i class="menu-icon icon-base bx bx-calendar"></i>
+          <div class="text-truncate">Attendance Calendar</div>
         </a>
       </li>
 
@@ -73,10 +80,17 @@
         </a>
       </li>
 
+      <li class="menu-item {% if '/attendance/calendar/' in request.path %}active{% endif %}">
+        <a href="{% url 'employees:attendance_calendar' %}" class="menu-link">
+          <i class="menu-icon icon-base bx bx-calendar"></i>
+          <div class="text-truncate">My Attendance</div>
+        </a>
+      </li>
+
       <li class="menu-item {% if '/my-attendance/' in request.path %}active{% endif %}">
         <a href="{% url 'employees:my_attendance_logs' %}" class="menu-link">
           <i class="menu-icon icon-base bx bx-history"></i>
-          <div class="text-truncate">My Attendance Logs</div>
+          <div class="text-truncate">Attendance Logs</div>
         </a>
       </li>
 
