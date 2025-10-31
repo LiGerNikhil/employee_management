@@ -9,7 +9,6 @@
 <style>
 :root {
   --app-radius: 18px;
-  --app-soft-bg: #f4f6fb;
   --app-card-bg: #ffffff;
   --app-muted: #6c7383;
   --app-border: rgba(17, 24, 39, 0.06);
@@ -17,7 +16,18 @@
 }
 
 body {
-  background: var(--app-soft-bg);
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 55%, #e0e7ff 100%);
+}
+
+.layout-wrapper,
+.layout-page,
+.content-wrapper {
+  background: transparent !important;
+}
+
+.container-p-y {
+  padding-top: 0.5rem !important;
+  padding-bottom: 1.5rem !important;
 }
 
 .app-screen {
@@ -380,10 +390,6 @@ body {
 
 /* Desktop adjustments */
 @media (min-width: 992px) {
-  body {
-    background: #eef1f8;
-  }
-
   .app-screen {
     flex-direction: row;
     flex-wrap: wrap;

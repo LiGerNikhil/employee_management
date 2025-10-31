@@ -1,5 +1,7 @@
 {% load static %}
 
+{% if show_mobile_nav|default:True %}
+
 <!-- Mobile Bottom Nav -->
 <nav class="mobile-bottom-nav d-lg-none">
   <div class="mobile-bottom-nav__container">
@@ -183,3 +185,4 @@
     }
   }
 </style>
+{% endif %}

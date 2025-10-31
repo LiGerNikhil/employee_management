@@ -5,202 +5,156 @@
 {% block title %}My Attendance Calendar | Employee Portal{% endblock %}
 
 {% block content %}
-<div class="row">
-  <!-- Page Header -->
-  <div class="col-12 mb-4">
-    <div class="card bg-gradient-primary text-white">
-      <div class="card-body">
-        <h4 class="card-title text-white mb-1">
-          <i class="bx bx-calendar me-2"></i>My Attendance Calendar
-        </h4>
-        <p class="mb-0 opacity-75">Track your monthly attendance and view detailed records</p>
-      </div>
+<div class="am-screen">
+  <header class="am-hero">
+    <div class="am-hero__overline">My Attendance</div>
+    <h1 class="am-hero__title">{{ month_name }} {{ year }}</h1>
+    <p class="am-hero__subtitle">Stay on top of your attendance. Tap any day to view the full check-in story.</p>
+
+    <div class="am-hero__nav" role="group" aria-label="Month navigation">
+      <a href="?year={{ prev_year }}&month={{ prev_month }}" class="am-nav-btn" aria-label="Previous month">
+        <i class="bx bx-chevron-left"></i>
+      </a>
+      <button type="button" class="am-nav-btn am-nav-btn--today" aria-label="Go to current month" onclick="window.location.href='?year={{ current_date.year }}&month={{ current_date.month }}'">
+        <i class="bx bx-current-location"></i>
+        <span>Today</span>
+      </button>
+      <a href="?year={{ next_year }}&month={{ next_month }}" class="am-nav-btn" aria-label="Next month">
+        <i class="bx bx-chevron-right"></i>
+      </a>
     </div>
+
+    <div class="am-hero__year">
+      <label for="am-year-select" class="am-select__label">Year</label>
+      <select id="am-year-select" class="am-select" onchange="window.location.href='?year='+this.value+'&month={{ month }}'">
+        {% for y in year_range %}
+          <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </header>
+
+  <div class="am-month-picker" data-active-month="{{ month }}">
+    <button type="button"
+            class="am-month-picker__trigger"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            aria-label="Select month">
+      <span class="am-month-picker__label">Month</span>
+      <span class="am-month-picker__value">{{ month_name }}</span>
+      <i class="bx bx-chevron-down am-month-picker__icon" aria-hidden="true"></i>
+    </button>
+    <ul class="am-month-picker__list" role="listbox">
+      {% for m in months_list %}
+        <li role="option" aria-selected="{% if m.number == month %}true{% else %}false{% endif %}">
+          <a href="?year={{ year }}&month={{ m.number }}"
+             class="am-month-picker__option {% if m.number == month %}am-month-picker__option--active{% endif %}"
+             data-month="{{ m.number }}">
+            <span class="am-month-picker__option-name">{{ m.name }}</span>
+            <span class="am-month-picker__option-abbr">{{ m.abbr }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+    <div class="am-month-picker__backdrop" aria-hidden="true"></div>
   </div>
 
-  <!-- Month Statistics -->
-  <div class="col-12 mb-4">
-    <div class="app-metrics app-metrics--grid">
-      <div class="app-metric">
-        <span class="app-metric__icon" style="background: rgba(99, 102, 241, 0.16); color: #4338ca;">
-          <i class="bx bx-calendar-check"></i>
-        </span>
-        <div class="app-metric__data">
-          <span class="app-metric__value">{{ total_working_days }}</span>
-          <span class="app-metric__label">Working days</span>
-        </div>
-      </div>
+  <section class="am-stats" aria-label="Attendance summary">
+    <article class="am-stat am-stat--working">
+      <span class="am-stat__label">Working days</span>
+      <span class="am-stat__value">{{ total_working_days }}</span>
+    </article>
+    <article class="am-stat am-stat--present">
+      <span class="am-stat__label">Present</span>
+      <span class="am-stat__value">{{ present_days }}</span>
+    </article>
+    <article class="am-stat am-stat--half">
+      <span class="am-stat__label">Half day</span>
+      <span class="am-stat__value">{{ half_day_days }}</span>
+    </article>
+    <article class="am-stat am-stat--absent">
+      <span class="am-stat__label">Absent</span>
+      <span class="am-stat__value">{{ absent_days }}</span>
+    </article>
+    <article class="am-stat am-stat--rate">
+      <span class="am-stat__label">Attendance rate</span>
+      <span class="am-stat__value">{{ attendance_percentage }}%</span>
+    </article>
+  </section>
 
-      <div class="app-metric">
-        <span class="app-metric__icon" style="background: rgba(34, 197, 94, 0.18); color: #15803d;">
-          <i class="bx bx-check-double"></i>
-        </span>
-        <div class="app-metric__data">
-          <span class="app-metric__value">{{ present_days }}</span>
-          <span class="app-metric__label">Present</span>
-        </div>
-      </div>
+  <section class="am-calendar" aria-label="Attendance calendar">
+    <div class="am-calendar__weekdays" role="row">
+      <span class="am-calendar__weekday" role="columnheader">Sun</span>
+      <span class="am-calendar__weekday" role="columnheader">Mon</span>
+      <span class="am-calendar__weekday" role="columnheader">Tue</span>
+      <span class="am-calendar__weekday" role="columnheader">Wed</span>
+      <span class="am-calendar__weekday" role="columnheader">Thu</span>
+      <span class="am-calendar__weekday" role="columnheader">Fri</span>
+      <span class="am-calendar__weekday" role="columnheader">Sat</span>
+    </div>
+    <div class="am-calendar__grid" role="grid">
+      {% for week in calendar_data %}
+        {% for day in week %}
+          {% if day %}
+            {% if day.attendance %}
+              <button type="button"
+                      class="am-calendar__cell {% if day.is_today %}am-calendar__cell--today{% endif %} {% if day.is_future %}am-calendar__cell--future{% endif %} {% if day.status %}am-calendar__cell--{{ day.status }}{% endif %} am-calendar__cell--interactive"
+                      role="gridcell"
+                      aria-label="{{ day.date|date:'F j, Y' }} - {{ day.status|default:'no data' }}"
+                      data-bs-toggle="modal"
+                      data-bs-target="#attendanceModal"
+                      data-date="{{ day.date|date:'Y-m-d' }}"
+                      data-checkin="{{ day.attendance.check_in_time|date:'H:i:s' }}"
+                      data-checkout="{% if day.attendance.check_out_time %}{{ day.attendance.check_out_time|date:'H:i:s' }}{% else %}Not checked out{% endif %}"
+                      data-duration="{{ day.attendance.duration }}"
+                      data-status="{{ day.status }}"
+                      data-halfday="{{ day.is_half_day|yesno:'true,false' }}">
+                <span class="am-calendar__date">{{ day.day }}</span>
+                <span class="am-calendar__dot"></span>
+              </button>
+            {% else %}
+              <div class="am-calendar__cell {% if day.is_today %}am-calendar__cell--today{% endif %} {% if day.is_future %}am-calendar__cell--future{% endif %} {% if day.status %}am-calendar__cell--{{ day.status }}{% endif %}" role="gridcell" aria-label="{{ day.date|date:'F j, Y' }} - {{ day.status|default:'no data' }}">
+                <span class="am-calendar__date">{{ day.day }}</span>
+                <span class="am-calendar__dot"></span>
+              </div>
+            {% endif %}
+          {% else %}
+            <div class="am-calendar__cell am-calendar__cell--empty" role="gridcell" aria-hidden="true"></div>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </section>
 
-      <div class="app-metric">
-        <span class="app-metric__icon" style="background: rgba(239, 68, 68, 0.18); color: #b91c1c;">
-          <i class="bx bx-x-circle"></i>
-        </span>
-        <div class="app-metric__data">
-          <span class="app-metric__value">{{ absent_days }}</span>
-          <span class="app-metric__label">Absent</span>
-        </div>
+  <section class="am-legend" aria-label="Legend">
+    <h2 class="am-section-title">Legend</h2>
+    <div class="am-legend__items">
+      <div class="am-legend__item am-legend__item--present">
+        <span class="am-legend__dot"></span>
+        <span class="am-legend__label">Present</span>
       </div>
-
-      <div class="app-metric">
-        <span class="app-metric__icon" style="background: rgba(56, 189, 248, 0.18); color: #0ea5e9;">
-          <i class="bx bx-adjust"></i>
-        </span>
-        <div class="app-metric__data">
-          <span class="app-metric__value">{{ half_day_days }}</span>
-          <span class="app-metric__label">Half days</span>
-        </div>
+      <div class="am-legend__item am-legend__item--half">
+        <span class="am-legend__dot"></span>
+        <span class="am-legend__label">Half day</span>
       </div>
-
-      <div class="app-metric">
-        <span class="app-metric__icon" style="background: rgba(251, 191, 36, 0.18); color: #c2410c;">
-          <i class="bx bx-pie-chart-alt"></i>
-        </span>
-        <div class="app-metric__data">
-          <span class="app-metric__value">{{ attendance_percentage }}%</span>
-          <span class="app-metric__label">Attendance rate</span>
-        </div>
+      <div class="am-legend__item am-legend__item--checked-in">
+        <span class="am-legend__dot"></span>
+        <span class="am-legend__label">Checked-in only</span>
+      </div>
+      <div class="am-legend__item am-legend__item--absent">
+        <span class="am-legend__dot"></span>
+        <span class="am-legend__label">Absent</span>
+      </div>
+      <div class="am-legend__item am-legend__item--holiday">
+        <span class="am-legend__dot"></span>
+        <span class="am-legend__label">Holiday</span>
+      </div>
+      <div class="am-legend__item am-legend__item--future">
+        <span class="am-legend__dot"></span>
+        <span class="am-legend__label">Upcoming day</span>
       </div>
     </div>
-  </div>
-
-  <!-- Calendar Card -->
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-          <h5 class="card-title m-0">{{ month_name }} {{ year }}</h5>
-          
-          <!-- Month/Year Selector -->
-          <div class="d-flex gap-2 flex-wrap">
-            <!-- Quick Month Selector -->
-            <div class="btn-group" role="group">
-              {% for m in months_list %}
-                <a href="?year={{ year }}&month={{ m.number }}" 
-                   class="btn btn-sm {% if m.number == month %}btn-primary{% else %}btn-outline-primary{% endif %}"
-                   title="{{ m.name }}">
-                  {{ m.abbr }}
-                </a>
-              {% endfor %}
-            </div>
-            
-            <!-- Year Selector -->
-            <select class="form-select form-select-sm" style="width: auto;" onchange="window.location.href='?year='+this.value+'&month={{ month }}'">
-              {% for y in year_range %}
-                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
-              {% endfor %}
-            </select>
-            
-            <!-- Navigation Arrows -->
-            <div class="btn-group" role="group">
-              <a href="?year={{ prev_year }}&month={{ prev_month }}" class="btn btn-sm btn-outline-secondary">
-                <i class="bx bx-chevron-left"></i>
-              </a>
-              <a href="?year={{ current_date.year }}&month={{ current_date.month }}" class="btn btn-sm btn-outline-secondary" title="Today">
-                <i class="bx bx-calendar-event"></i>
-              </a>
-              <a href="?year={{ next_year }}&month={{ next_month }}" class="btn btn-sm btn-outline-secondary">
-                <i class="bx bx-chevron-right"></i>
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card-body">
-        <!-- Calendar Grid -->
-        <div class="table-responsive">
-          <table class="table table-bordered attendance-calendar">
-            <thead>
-              <tr>
-                <th class="text-center">Sun</th>
-                <th class="text-center">Mon</th>
-                <th class="text-center">Tue</th>
-                <th class="text-center">Wed</th>
-                <th class="text-center">Thu</th>
-                <th class="text-center">Fri</th>
-                <th class="text-center">Sat</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for week in calendar_data %}
-                <tr>
-                  {% for day in week %}
-                    {% if day %}
-                      <td class="calendar-day {% if day.is_today %}today{% endif %} {% if day.is_future %}future{% endif %} {{ day.status }}"
-                          data-date="{{ day.date|date:'Y-m-d' }}"
-                          {% if day.attendance %}
-                            data-bs-toggle="modal" 
-                            data-bs-target="#attendanceModal"
-                            data-checkin="{{ day.attendance.check_in_time|date:'H:i:s' }}"
-                            data-checkout="{% if day.attendance.check_out_time %}{{ day.attendance.check_out_time|date:'H:i:s' }}{% else %}Not checked out{% endif %}"
-                            data-duration="{{ day.attendance.duration }}"
-                            data-halfday="{{ day.is_half_day|yesno:'true,false' }}"
-                            style="cursor: pointer;"
-                          {% endif %}>
-                        <div class="day-number">{{ day.day }}</div>
-                        {% if day.status != 'none' %}
-                          <div class="day-status">
-                            <span class="badge {{ day.status_class }} badge-sm">
-                              <i class="bx {{ day.status_icon }}"></i>
-                              {% if day.is_half_day %}<span class="ms-1">½</span>{% endif %}
-                            </span>
-                          </div>
-                        {% endif %}
-                        {% if day.attendance %}
-                          <div class="day-time">
-                            <small class="text-muted">{{ day.attendance.check_in_time|date:'H:i' }}</small>
-                          </div>
-                        {% endif %}
-                      </td>
-                    {% else %}
-                      <td class="calendar-day empty"></td>
-                    {% endif %}
-                  {% endfor %}
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Legend -->
-        <div class="mt-4">
-          <h6 class="mb-3">Legend:</h6>
-          <div class="d-flex flex-wrap gap-3">
-            <div class="d-flex align-items-center">
-              <span class="badge bg-success me-2"><i class="bx bx-check-circle"></i></span>
-              <span>Present (Full Day)</span>
-            </div>
-            <div class="d-flex align-items-center">
-              <span class="badge bg-info me-2"><i class="bx bx-time-five"></i></span>
-              <span>Half Day</span>
-            </div>
-            <div class="d-flex align-items-center">
-              <span class="badge bg-warning me-2"><i class="bx bx-time"></i></span>
-              <span>Checked In (Not Checked Out)</span>
-            </div>
-            <div class="d-flex align-items-center">
-              <span class="badge bg-danger me-2"><i class="bx bx-x-circle"></i></span>
-              <span>Absent</span>
-            </div>
-            <div class="d-flex align-items-center">
-              <span class="badge bg-secondary me-2"><i class="bx bx-calendar"></i></span>
-              <span>Holiday (Sun & 1st, 3rd, 5th Sat)</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  </section>
 </div>
 
 <!-- Attendance Detail Modal -->
@@ -217,6 +171,10 @@
         <div class="mb-3">
           <label class="form-label fw-bold">Date:</label>
           <p id="modal-date" class="mb-0"></p>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Status:</label>
+          <p id="modal-status" class="mb-0"></p>
         </div>
         <div class="mb-3">
           <label class="form-label fw-bold">Check-in Time:</label>
@@ -241,333 +199,577 @@
 
 {% block page_css %}
 <style>
-.attendance-calendar {
-  margin-bottom: 0;
+:root {
+  --am-surface: #ffffff;
+  --am-muted: #64748b;
+  --am-muted-strong: #475569;
+  --am-border: rgba(15, 23, 42, 0.08);
+  --am-border-strong: rgba(15, 23, 42, 0.12);
+  --am-shadow-lg: 0 24px 48px rgba(15, 23, 42, 0.18);
+  --am-shadow-md: 0 14px 30px rgba(15, 23, 42, 0.12);
+  --am-shadow-sm: 0 10px 20px rgba(15, 23, 42, 0.1);
+  --am-radius-lg: 26px;
+  --am-radius-md: 18px;
+  --am-radius-sm: 14px;
+  --am-accent: #2563eb;
+  --am-accent-alt: #7c3aed;
 }
 
-.app-metrics {
+.am-screen {
+  width: min(100%, 420px);
+  margin: 0 auto;
+  padding: 1.85rem 1.25rem 2.5rem;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 18px;
-  border: 1px solid rgba(17, 24, 39, 0.05);
-  padding: 0.9rem 1rem;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+  color: #0f172a;
 }
 
-.app-metrics--grid {
-  align-items: stretch;
+.am-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 0% -10%, rgba(37, 99, 235, 0.2), transparent 55%),
+              radial-gradient(circle at 100% 100%, rgba(124, 58, 237, 0.22), transparent 45%);
+  opacity: 0.65;
+  z-index: -2;
 }
 
-.app-metric {
-  flex: 1 1 160px;
-  min-width: 140px;
-  display: flex;
-  gap: 0.6rem;
-  align-items: center;
+.am-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.82), rgba(248, 250, 252, 0.98));
+  z-index: -1;
 }
 
-.app-metric__icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 14px;
+@media (min-width: 600px) {
+  .am-screen {
+    width: min(100%, 620px);
+    padding: 2.25rem 2rem 3rem;
+    gap: 1.75rem;
+  }
+}
+
+@media (min-width: 920px) {
+  .am-screen {
+    width: min(100%, 860px);
+  }
+}
+
+.am-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--am-accent), var(--am-accent-alt));
+  border-radius: var(--am-radius-lg);
+  padding: 1.7rem 1.5rem 1.9rem;
+  color: #ffffff;
   display: grid;
-  place-items: center;
+  gap: 1.05rem;
+  box-shadow: var(--am-shadow-lg);
+  transform: translateY(12px);
+  opacity: 0;
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.am-hero--loaded {
+  opacity: 1;
+  transform: none;
+}
+
+.am-hero::after {
+  content: '';
+  position: absolute;
+  inset: -38% -14% 25% 40%;
+  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.28), transparent 68%);
+  z-index: 0;
+}
+
+.am-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.am-hero__overline {
+  font-size: 0.75rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.am-hero__title {
+  font-size: clamp(1.65rem, 3.5vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.am-hero__subtitle {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  max-width: 32ch;
+  opacity: 0.9;
+}
+
+.am-hero__nav {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.am-nav-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(15, 23, 42, 0.18);
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.am-nav-btn i {
   font-size: 1.1rem;
 }
 
-.app-metric__data {
+.am-nav-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.24);
+}
+
+.am-nav-btn--today {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.65));
+  color: #0f172a;
+  border-color: transparent;
+}
+
+.am-nav-btn--pressed {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+
+.am-hero__year {
   display: grid;
-  gap: 0.1rem;
+  gap: 0.35rem;
+  align-items: start;
 }
 
-.app-metric__value {
-  font-size: 1.15rem;
-  font-weight: 700;
-  line-height: 1;
+.am-select__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
 }
 
-.app-metric__label {
+.am-select {
+  border-radius: 14px;
+  border: none;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6), 0 8px 16px rgba(15, 23, 42, 0.18);
+}
+
+.am-month-picker {
+  position: relative;
+  z-index: 10;
+}
+
+.am-month-picker__trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--am-radius-md);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.9);
+  color: #0f172a;
+  box-shadow: var(--am-shadow-sm);
+  font-size: 0.92rem;
+  font-weight: 600;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.am-month-picker__trigger:focus,
+.am-month-picker__trigger:hover {
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+.am-month-picker__label {
   font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #6b7280;
+  letter-spacing: 0.12em;
+  color: var(--am-muted);
 }
 
-.attendance-calendar th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  padding: 12px 8px;
-  text-transform: uppercase;
-  font-size: 0.875rem;
+.am-month-picker__value {
+  flex: 1;
+  text-align: right;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
-.calendar-day {
-  height: 100px;
-  vertical-align: top;
-  padding: 8px;
-  position: relative;
-  transition: all 0.3s ease;
+.am-month-picker__icon {
+  font-size: 1.2rem;
+  color: var(--am-muted);
+  transition: transform 0.2s ease;
 }
 
-.calendar-day.empty {
-  background-color: #f8f9fa;
+.am-month-picker__trigger[aria-expanded="true"] .am-month-picker__icon {
+  transform: rotate(180deg);
 }
 
-.calendar-day.today {
-  background-color: #e7f3ff;
-  border: 2px solid #0d6efd !important;
-}
-
-.calendar-day.future {
-  background-color: #fafafa;
-  opacity: 0.6;
-}
-
-.calendar-day.present {
-  background-color: #d1f2eb;
-}
-
-.calendar-day.checked-in {
-  background-color: #fff3cd;
-}
-
-.calendar-day.absent {
-  background-color: #f8d7da;
-}
-
-.calendar-day.holiday {
-  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
-  position: relative;
-}
-
-.calendar-day.holiday::after {
-  content: '🏖️';
+.am-month-picker__list {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: var(--am-radius-md);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.16);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  padding: 0.35rem;
+  margin: 0;
+  list-style: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.am-month-picker__list--open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.am-month-picker__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--am-radius-sm);
+  color: #0f172a;
   font-size: 0.9rem;
-  opacity: 0.6;
-}
-
-.calendar-day:not(.empty):not(.future):hover {
-  transform: scale(1.05);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-  z-index: 10;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.calendar-day[data-bs-toggle="modal"] {
-  cursor: pointer !important;
-}
-
-.calendar-day[data-bs-toggle="modal"]:active {
-  transform: scale(0.98);
-}
-
-.day-number {
-  font-size: 1.1rem;
   font-weight: 600;
-  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 
-.day-status {
-  margin-top: 4px;
+.am-month-picker__option:hover,
+.am-month-picker__option:focus {
+  background: rgba(37, 99, 235, 0.1);
 }
 
-.day-time {
-  margin-top: 4px;
-  font-size: 0.75rem;
+.am-month-picker__option--active {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(124, 58, 237, 0.12));
+  color: var(--am-accent);
 }
 
-.badge-sm {
+.am-month-picker__option-name {
+  font-weight: 600;
+}
+
+.am-month-picker__option-abbr {
+  font-size: 0.78rem;
+  color: var(--am-muted);
+}
+
+.am-month-picker__backdrop {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+.am-month-picker__backdrop--active {
+  pointer-events: auto;
+}
+
+.am-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.9rem;
+}
+
+.am-stat {
+  position: relative;
+  background: var(--am-surface);
+  padding: 1rem 0.95rem 1.05rem;
+  border-radius: var(--am-radius-md);
+  border: 1px solid var(--am-border);
+  box-shadow: var(--am-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.am-stat::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.1;
+}
+
+.am-stat--visible {
+  opacity: 1;
+  transform: none;
+}
+
+.am-stat__label {
   font-size: 0.7rem;
-  padding: 0.25rem 0.5rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--am-muted);
 }
 
-/* Mobile Responsive */
-@media (max-width: 992px) {
-  /* Tablet adjustments */
-  .btn-group .btn-sm {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-  }
-  
-  .calendar-day {
-    height: 85px;
-    padding: 6px;
-  }
-  
-  .app-metric {
-    flex: 1 1 48%;
+.am-stat__value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.am-stat--working::after {
+  background: linear-gradient(135deg, #6366f1, transparent 60%);
+}
+
+.am-stat--present::after {
+  background: linear-gradient(135deg, #22c55e, transparent 60%);
+}
+
+.am-stat--half::after {
+  background: linear-gradient(135deg, #38bdf8, transparent 60%);
+}
+
+.am-stat--absent::after {
+  background: linear-gradient(135deg, #ef4444, transparent 60%);
+}
+
+.am-stat--rate::after {
+  background: linear-gradient(135deg, #f59e0b, transparent 60%);
+}
+
+.am-calendar {
+  background: var(--am-surface);
+  border-radius: var(--am-radius-lg);
+  padding: 1.15rem 1.15rem 1.3rem;
+  box-shadow: var(--am-shadow-md);
+  border: 1px solid var(--am-border);
+  display: grid;
+  gap: 1rem;
+}
+
+.am-calendar__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+  color: var(--am-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.am-calendar__weekday {
+  font-weight: 600;
+}
+
+.am-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.am-calendar__cell {
+  --am-status-color: rgba(148, 163, 184, 0.35);
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  min-height: 68px;
+  padding: 0.65rem 0.45rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.am-calendar__cell--interactive {
+  cursor: pointer;
+}
+
+.am-calendar__cell--interactive:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--am-shadow-sm);
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.am-calendar__cell--selected {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+  border-color: rgba(37, 99, 235, 0.6);
+}
+
+.am-calendar__cell--today {
+  border: 1.5px solid rgba(37, 99, 235, 0.55);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+.am-calendar__cell--future {
+  opacity: 0.55;
+}
+
+.am-calendar__cell--empty {
+  border: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.am-calendar__date {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.am-calendar__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--am-status-color);
+  margin-top: auto;
+  align-self: center;
+}
+
+.am-calendar__cell--present { --am-status-color: #22c55e; }
+.am-calendar__cell--halfday { --am-status-color: #38bdf8; }
+.am-calendar__cell--checked-in { --am-status-color: #facc15; }
+.am-calendar__cell--absent { --am-status-color: #ef4444; }
+.am-calendar__cell--holiday { --am-status-color: #94a3b8; }
+.am-calendar__cell--none .am-calendar__dot { background: rgba(148, 163, 184, 0.25); }
+
+.am-legend {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: var(--am-radius-md);
+  padding: 1.05rem 1.1rem;
+  box-shadow: var(--am-shadow-sm);
+  border: 1px solid var(--am-border);
+  display: grid;
+  gap: 0.9rem;
+}
+
+.am-section-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--am-muted-strong);
+}
+
+.am-legend__items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 0.65rem;
+}
+
+.am-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--am-radius-sm);
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--am-muted-strong);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.am-legend__dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+}
+
+.am-legend__item--present .am-legend__dot { background: #22c55e; }
+.am-legend__item--half .am-legend__dot { background: #38bdf8; }
+.am-legend__item--checked-in .am-legend__dot { background: #facc15; }
+.am-legend__item--absent .am-legend__dot { background: #ef4444; }
+.am-legend__item--holiday .am-legend__dot { background: #94a3b8; }
+.am-legend__item--future .am-legend__dot { background: rgba(148, 163, 184, 0.45); }
+
+.am-legend__label {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+@media (min-width: 768px) {
+  .am-hero {
+    padding: 2.1rem 2rem 2.2rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
   }
 
-  .day-number {
-    font-size: 1rem;
+  .am-hero__subtitle {
+    max-width: 36ch;
+  }
+
+  .am-hero__nav {
+    order: 2;
+    grid-column: 1 / -1;
+  }
+
+  .am-hero__year {
+    justify-self: end;
+    text-align: right;
+  }
+
+  .am-stats {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .am-calendar {
+    padding: 1.4rem 1.5rem 1.6rem;
+  }
+
+  .am-calendar__cell {
+    min-height: 88px;
   }
 }
 
-@media (max-width: 768px) {
-  /* Mobile adjustments */
-  .card-header {
-    padding: 1rem;
-  }
-  
-  .app-metrics {
-    padding: 0.75rem 0.8rem;
-    gap: 0.65rem;
+@media (prefers-reduced-motion: reduce) {
+  .am-hero,
+  .am-stat {
+    transition: none;
   }
 
-  .app-metric {
-    flex: 1 1 100%;
+  .am-nav-btn:hover {
+    transform: none;
+    box-shadow: none;
   }
 
-  .app-metric__icon {
-    width: 34px;
-    height: 34px;
-    font-size: 1rem;
-  }
-
-  .app-metric__value {
-    font-size: 1.05rem;
-  }
-
-  .card-body {
-    padding: 0.75rem;
-  }
-  
-  /* Hide month abbreviations, show only icons */
-  .btn-group .btn-sm {
-    font-size: 0;
-    padding: 0.35rem 0.5rem;
-    min-width: 32px;
-  }
-  
-  .btn-group .btn-sm::first-letter {
-    font-size: 0.7rem;
-  }
-  
-  /* Make table fully responsive */
-  .table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  .attendance-calendar {
-    min-width: 100%;
-    font-size: 0.75rem;
-  }
-  
-  .attendance-calendar th {
-    padding: 8px 4px;
-    font-size: 0.7rem;
-  }
-  
-  .calendar-day {
-    height: 70px;
-    padding: 4px;
-  }
-  
-  .day-number {
-    font-size: 0.9rem;
-  }
-  
-  .day-time {
-    font-size: 0.65rem;
-  }
-  
-  .btn-group .btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-  }
-}
-
-@media (max-width: 576px) {
-  /* Extra small mobile */
-  .card-header h5 {
-    font-size: 0.95rem;
-  }
-  
-  /* Stack month selector vertically */
-  .card-header .d-flex {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-  }
-  
-  .btn-group {
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-  }
-  
-  .btn-group .btn-sm {
-    flex: 1;
-    min-width: 28px;
-    font-size: 0.65rem;
-    padding: 0.3rem 0.2rem;
-  }
-  
-  .form-select-sm {
-    width: 100% !important;
-    margin-top: 0.5rem;
-  }
-  
-  /* Calendar adjustments */
-  .attendance-calendar th {
-    padding: 6px 2px;
-    font-size: 0.65rem;
-  }
-  
-  .calendar-day {
-    height: 55px;
-    padding: 2px;
-    font-size: 0.7rem;
-  }
-  
-  .day-number {
-    font-size: 0.75rem;
-    margin-bottom: 2px;
-  }
-  
-  .day-status .badge {
-    font-size: 0.55rem;
-    padding: 0.1rem 0.25rem;
-  }
-  
-  .day-status .bx {
-    font-size: 0.6rem;
-  }
-  
-  .day-time {
-    display: none;
-  }
-  
-  /* Reduce hover effects on mobile */
-  .calendar-day:not(.empty):not(.future):hover {
-    transform: scale(1.02);
-  }
-  
-  /* Legend adjustments */
-  .mt-4 h6 {
-    font-size: 0.9rem;
-  }
-  
-  .mt-4 .d-flex span {
-    font-size: 0.75rem;
-  }
-  
-  .mt-4 .badge {
-    font-size: 0.65rem;
-  }
-  
-  /* Stats cards */
-  .card-body h4 {
-    font-size: 1.25rem;
-  }
-  
-  .card-body small {
-    font-size: 0.75rem;
+  .am-calendar__cell--interactive:hover {
+    transform: none;
+    box-shadow: none;
   }
 }
 </style>
@@ -576,75 +778,151 @@
 {% block page_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const attendanceModal = document.getElementById('attendanceModal');
-  
-  if (attendanceModal) {
-    attendanceModal.addEventListener('show.bs.modal', function(event) {
-      const button = event.relatedTarget;
-      const date = button.getAttribute('data-date');
-      const checkin = button.getAttribute('data-checkin');
-      const checkout = button.getAttribute('data-checkout');
-      const duration = button.getAttribute('data-duration');
-      const isHalfDay = button.getAttribute('data-halfday') === 'true';
+  const hero = document.querySelector('.am-hero');
+  if (hero) {
+    window.requestAnimationFrame(() => hero.classList.add('am-hero--loaded'));
+  }
 
-      // Update modal content
-      document.getElementById('modal-date').textContent = new Date(date).toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+  const statCards = document.querySelectorAll('.am-stat');
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('am-stat--visible');
+          observer.unobserve(entry.target);
+        }
       });
+    }, { threshold: 0.3 });
+
+    statCards.forEach(card => observer.observe(card));
+  } else {
+    statCards.forEach(card => card.classList.add('am-stat--visible'));
+  }
+
+  const monthPicker = document.querySelector('.am-month-picker');
+  if (monthPicker) {
+    const trigger = monthPicker.querySelector('.am-month-picker__trigger');
+    const list = monthPicker.querySelector('.am-month-picker__list');
+    const backdrop = monthPicker.querySelector('.am-month-picker__backdrop');
+    const activeOption = monthPicker.querySelector('.am-month-picker__option--active');
+
+    const openPicker = () => {
+      trigger.setAttribute('aria-expanded', 'true');
+      list.classList.add('am-month-picker__list--open');
+      backdrop.classList.add('am-month-picker__backdrop--active');
+      if (activeOption) {
+        activeOption.scrollIntoView({ block: 'center' });
+      }
+    };
+
+    const closePicker = () => {
+      trigger.setAttribute('aria-expanded', 'false');
+      list.classList.remove('am-month-picker__list--open');
+      backdrop.classList.remove('am-month-picker__backdrop--active');
+    };
+
+    trigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      const isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+      if (isExpanded) {
+        closePicker();
+      } else {
+        openPicker();
+      }
+    });
+
+    backdrop.addEventListener('click', closePicker);
+
+    monthPicker.addEventListener('keyup', (event) => {
+      if (event.key === 'Escape') {
+        closePicker();
+        trigger.focus();
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!monthPicker.contains(event.target)) {
+        closePicker();
+      }
+    });
+  }
+
+  const interactiveCells = document.querySelectorAll('.am-calendar__cell--interactive');
+  let lastSelectedCell = null;
+
+  interactiveCells.forEach(cell => {
+    cell.addEventListener('click', () => {
+      if (lastSelectedCell && lastSelectedCell !== cell) {
+        lastSelectedCell.classList.remove('am-calendar__cell--selected');
+      }
+      cell.classList.add('am-calendar__cell--selected');
+      lastSelectedCell = cell;
+    });
+  });
+
+  const attendanceModal = document.getElementById('attendanceModal');
+  if (attendanceModal) {
+    const statusMap = {
+      present: { badge: 'bg-success', icon: 'bx bx-check-circle', label: 'Present' },
+      halfday: { badge: 'bg-info', icon: 'bx bx-time-five', label: 'Half Day' },
+      'checked-in': { badge: 'bg-warning', icon: 'bx bx-time', label: 'Checked-in only' },
+      absent: { badge: 'bg-danger', icon: 'bx bx-x-circle', label: 'Absent' },
+      holiday: { badge: 'bg-secondary', icon: 'bx bx-calendar', label: 'Holiday' },
+      future: { badge: 'bg-secondary', icon: 'bx bx-calendar-event', label: 'Upcoming day' }
+    };
+
+    attendanceModal.addEventListener('show.bs.modal', function(event) {
+      const trigger = event.relatedTarget;
+      if (!trigger) {
+        return;
+      }
+
+      const date = trigger.getAttribute('data-date');
+      const checkin = trigger.getAttribute('data-checkin') || '—';
+      const checkout = trigger.getAttribute('data-checkout') || '—';
+      const duration = trigger.getAttribute('data-duration') || '—';
+      const statusKey = trigger.getAttribute('data-status');
+      const isHalfDay = trigger.getAttribute('data-halfday') === 'true';
+
+      const formattedDate = date
+        ? new Date(date).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })
+        : '—';
+
+      const statusMeta = isHalfDay ? statusMap.halfday : statusMap[statusKey] || null;
+      const statusTemplate = statusMeta
+        ? `<span class="badge ${statusMeta.badge}"><i class="${statusMeta.icon} me-1"></i>${statusMeta.label}</span>`
+        : '<span class="badge bg-secondary"><i class="bx bx-minus me-1"></i>Not available</span>';
+
+      document.getElementById('modal-date').textContent = formattedDate;
       document.getElementById('modal-checkin').textContent = checkin;
       document.getElementById('modal-checkout').textContent = checkout;
       document.getElementById('modal-duration').textContent = duration;
-      const statusBadge = isHalfDay
-        ? '<span class="badge bg-info"><i class="bx bx-time-five me-1"></i>Half Day</span>'
-        : (checkout && checkout !== 'Not checked out'
-          ? '<span class="badge bg-success"><i class="bx bx-check-circle me-1"></i>Present</span>'
-          : (checkin
-            ? '<span class="badge bg-warning"><i class="bx bx-time me-1"></i>Checked In</span>'
-            : '<span class="badge bg-danger"><i class="bx bx-x-circle me-1"></i>Absent</span>'
-          ));
-      document.getElementById('modal-status').innerHTML = statusBadge;
+      document.getElementById('modal-status').innerHTML = statusTemplate;
     });
   }
-  
-  // Add hover effect to calendar days with attendance
-  const calendarDays = document.querySelectorAll('.calendar-day[data-bs-toggle="modal"]');
-  calendarDays.forEach(day => {
-    day.addEventListener('mouseenter', function() {
-      this.style.cursor = 'pointer';
-    });
-  });
-  
-  // Add keyboard navigation for month selector
+
   document.addEventListener('keydown', function(e) {
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+      return;
+    }
+
     const currentMonth = {{ month }};
     const currentYear = {{ year }};
-    
+
     if (e.key === 'ArrowLeft') {
-      // Previous month
       const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
       const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
       window.location.href = `?year=${prevYear}&month=${prevMonth}`;
     } else if (e.key === 'ArrowRight') {
-      // Next month
       const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
       const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
       window.location.href = `?year=${nextYear}&month=${nextMonth}`;
     }
-  });
-  
-  // Add animation to statistics cards
-  const statCards = document.querySelectorAll('.card');
-  statCards.forEach((card, index) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    setTimeout(() => {
-      card.style.transition = 'all 0.5s ease';
-      card.style.opacity = '1';
-      card.style.transform = 'translateY(0)';
-    }, index * 100);
   });
 });
 </script>

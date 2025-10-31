@@ -1025,11 +1025,7 @@
                   </div>
                 </div>
                 <p class="attend-modal__time">{{ attendance.check_in_time|date:"H:i:s" }}</p>
-                {% if attendance.check_in_photo %}
-                  <div class="photo-preview">
-                    <img src="{{ attendance.check_in_photo.url }}" alt="Check-in photo" class="img-fluid rounded" />
-                  </div>
-                {% endif %}
+                
               </div>
 
               <div class="attend-modal__card">
@@ -1046,11 +1042,7 @@
                 </div>
                 {% if attendance.check_out_time %}
                   <p class="attend-modal__time">{{ attendance.check_out_time|date:"H:i:s" }}</p>
-                  {% if attendance.check_out_photo %}
-                    <div class="photo-preview">
-                      <img src="{{ attendance.check_out_photo.url }}" alt="Check-out photo" class="img-fluid rounded" />
-                    </div>
-                  {% endif %}
+                  
                 {% else %}
                   <div class="attend-modal__placeholder">
                     <i class="bx bx-time-five"></i>

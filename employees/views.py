@@ -155,6 +155,7 @@ class LoginView(TemplateView):
         context = TemplateLayout.init(self, super().get_context_data(**kwargs))
         context.update({
             'layout_path': TemplateHelper.set_layout('layout_blank.html', context),
+            'hide_mobile_nav': True,
         })
         return context
 
@@ -2008,8 +2009,8 @@ def employee_attendance_calendar(request):
         
         return False
     
-    # Generate calendar data
-    cal = calendar.monthcalendar(year, month)
+    # Generate calendar data (weeks start on Sunday)
+    cal = calendar.Calendar(firstweekday=calendar.SUNDAY).monthdayscalendar(year, month)
     calendar_data = []
     
     for week in cal:
@@ -2188,8 +2189,8 @@ def admin_attendance_calendar(request):
         
         return False
     
-    # Generate calendar data
-    cal = calendar.monthcalendar(year, month)
+    # Generate calendar data (weeks start on Sunday)
+    cal = calendar.Calendar(firstweekday=calendar.SUNDAY).monthdayscalendar(year, month)
     calendar_data = []
     
     for week in cal:

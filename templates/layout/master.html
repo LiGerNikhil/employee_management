@@ -42,13 +42,15 @@
 
 </head>
 
-<body>
+<body class="{% block body_classes %}{% endblock body_classes %}">
   <!-- beautify ignore:end -->
 
   {% block layout %}
   {% endblock layout %}
 
-  {% include 'layout/partials/navbar/_mobile_navbar.html' %}
+  {% if not hide_mobile_nav %}
+    {% include 'layout/partials/navbar/_mobile_navbar.html' %}
+  {% endif %}
 
   {% include is_front|yesno:"./partials/scripts_front.html,./partials/scripts.html" %}
 

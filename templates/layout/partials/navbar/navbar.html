@@ -3,82 +3,159 @@
 
 
 <nav class="layout-navbar {{container_class}} navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme" id="layout-navbar">
-  {% if not navbar_hide_toggle %}
-  <div class="layout-menu-toggle navbar-nav align-items-xl-center me-4 me-xl-0 d-xl-none">
-    <a class="nav-item nav-link px-0 me-xl-6" href="javascript:void(0)">
-      <i class="icon-base bx bx-menu icon-md"></i>
-    </a>
-  </div>
-  {% endif %}
-  <div class="navbar-nav-right d-flex align-items-center justify-content-end w-100" id="navbar-collapse">
-    <ul class="navbar-nav flex-row align-items-center">
+  <div class="am-navbar">
+    {% if not navbar_hide_toggle %}
+      <button type="button"
+              class="am-navbar__toggle layout-menu-toggle"
+              aria-label="Toggle menu">
+        <span class="am-navbar__toggle-icon" aria-hidden="true">
+          <i class="bx bx-menu"></i>
+        </span>
+        <span class="am-navbar__toggle-label">Menu</span>
+      </button>
+    {% endif %}
 
-      <!-- User -->
-      <li class="nav-item navbar-dropdown dropdown-user dropdown">
-        <a class="nav-link dropdown-toggle hide-arrow p-0" href="javascript:void(0);" data-bs-toggle="dropdown">
-          <div class="avatar avatar-online">
-            {% if user.employee_profile.profile_picture %}
-              <img src="{{ user.employee_profile.profile_picture.url }}" alt class="rounded-circle" />
-            {% else %}
-              <div class="avatar-initial bg-label-primary rounded-circle">
-                {{ user.get_full_name|first|upper|default:user.username|first|upper }}
-              </div>
-            {% endif %}
-          </div>
-        </a>
-        <ul class="dropdown-menu dropdown-menu-end">
-          <li>
-            <a class="dropdown-item" href="{% if user.is_superuser %}{% url 'employees:superadmin_profile' %}{% else %}{% url 'employees:employee_profile' %}{% endif %}">
-              <div class="d-flex">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar avatar-online">
-                    {% if user.employee_profile.profile_picture %}
-                      <img src="{{ user.employee_profile.profile_picture.url }}" alt class="w-px-40 h-auto rounded-circle" />
-                    {% else %}
-                      <div class="avatar-initial bg-label-primary rounded-circle w-px-40 h-auto d-flex align-items-center justify-content-center">
-                        {{ user.get_full_name|first|upper|default:user.username|first|upper }}
-                      </div>
-                    {% endif %}
-                  </div>
-                </div>
-                <div class="flex-grow-1">
-                  <h6 class="mb-0">{{ user.get_full_name|default:user.username }}</h6>
-                  <small class="text-body-secondary">{% if user.is_superuser %}Superadmin{% else %}Employee{% endif %}</small>
-                </div>
-              </div>
-            </a>
-          </li>
-          <li>
-            <div class="dropdown-divider my-1"></div>
-          </li>
-          <li>
-            <a class="dropdown-item" href="{% if user.is_superuser %}{% url 'employees:superadmin_profile' %}{% else %}{% url 'employees:employee_profile' %}{% endif %}">
-              <i class="icon-base bx bx-user icon-md me-3"></i><span>My Profile</span>
-            </a>
-          </li>
-          {% if user.is_superuser %}
-          <li>
-            <a class="dropdown-item" href="{% url 'employees:admin_dashboard' %}">
-              <i class="icon-base bx bx-home icon-md me-3"></i><span>Dashboard</span>
-            </a>
-          </li>
-          {% endif %}
-          <li>
-            <a class="dropdown-item" href="http://127.0.0.1:8000/">
-              <i class="icon-base bx bx-home icon-md me-3"></i><span>Back to Main Site</span>
-            </a>
-          </li>
-          <li>
-            <div class="dropdown-divider my-1"></div>
-          </li>
-          <li>
-            <a class="dropdown-item" href="{% url 'employees:logout' %}">
-              <i class="icon-base bx bx-power-off icon-md me-3"></i><span>Log Out</span>
-            </a>
-          </li>
-        </ul>
-      </li>
-      <!--/ User -->
-    </ul>
   </div>
 </nav>
+
+{% block extra_navbar_styles %}
+  <style>
+    #layout-navbar {
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 0;
+      margin: 0.8rem auto 0.75rem;
+      max-width: 960px;
+    }
+
+    .am-navbar {
+      width: 100%;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 0.7rem 0.9rem;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+    }
+
+    .am-navbar__toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.8rem;
+      border: none;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      color: #ffffff;
+      font-size: 0.88rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      box-shadow: 0 16px 28px rgba(37, 99, 235, 0.26);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .am-navbar__toggle:focus-visible {
+      outline: 2px solid rgba(59, 130, 246, 0.6);
+      outline-offset: 3px;
+    }
+
+    .am-navbar__toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 34px rgba(37, 99, 235, 0.32);
+    }
+
+    .am-navbar__toggle:active {
+      transform: translateY(1px);
+      box-shadow: 0 12px 22px rgba(37, 99, 235, 0.24);
+    }
+
+    .am-navbar__toggle-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.22);
+      font-size: 1.25rem;
+    }
+
+    .am-navbar__toggle-label {
+      display: inline;
+    }
+
+    .am-navbar__headline {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .am-navbar__overline {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: rgba(15, 23, 42, 0.55);
+    }
+
+    .am-navbar__title {
+      margin: 0;
+      font-size: clamp(1.1rem, 5vw, 1.45rem);
+      font-weight: 700;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+    }
+
+    .am-navbar__user {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: rgba(37, 99, 235, 0.12);
+      color: #1d4ed8;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.22);
+      overflow: hidden;
+      transition: transform 0.2s ease;
+    }
+
+    .am-navbar__user:hover {
+      transform: translateY(-2px);
+    }
+
+    .am-navbar__user img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .am-navbar__user-initials {
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 420px) {
+      .am-navbar {
+        gap: 0.6rem;
+        padding: 0.65rem 0.8rem;
+      }
+
+      .am-navbar__toggle {
+        padding-inline: 0.7rem;
+      }
+
+      .am-navbar__toggle-label {
+        display: none;
+      }
+
+      .am-navbar__title {
+        font-size: 1.1rem;
+      }
+    }
+  </style>
+{% endblock %}
