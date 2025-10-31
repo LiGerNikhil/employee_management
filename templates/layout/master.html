@@ -48,6 +48,8 @@
   {% block layout %}
   {% endblock layout %}
 
+  {% include 'layout/partials/navbar/_mobile_navbar.html' %}
+
   {% include is_front|yesno:"./partials/scripts_front.html,./partials/scripts.html" %}
 
   <!--Vendors Javascript-->

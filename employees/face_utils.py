@@ -120,6 +120,11 @@ def get_match_tolerance(default=0.6):
     return getattr(settings, 'FACE_MATCH_TOLERANCE', default)
 
 
+def get_strict_match_tolerance(default=0.45):
+    """Return a stricter tolerance for one-to-one verifications."""
+    return getattr(settings, 'FACE_STRICT_MATCH_TOLERANCE', default)
+
+
 def is_encoding_unique(new_encoding, exclude_employee_id=None, tolerance=None):
     """
     Check that a face encoding is unique across all employees.
@@ -152,6 +157,49 @@ def is_encoding_unique(new_encoding, exclude_employee_id=None, tolerance=None):
             return False, emp, distance
 
     return True, None, None
+
+
+def find_best_face_match(unknown_encoding, employee_queryset, tolerance=None, uniqueness_margin=0.05):
+    """Find the best matching employee for the provided encoding ensuring uniqueness."""
+
+    if unknown_encoding is None:
+        return None
+
+    candidates = []
+    encodings = []
+    for employee in employee_queryset:
+        encoding = employee.get_face_encoding()
+        if encoding is None:
+            continue
+        candidates.append(employee)
+        encodings.append(encoding)
+
+    if not encodings:
+        return None
+
+    encodings_array = np.stack(encodings)
+    distances = face_recognition.face_distance(encodings_array, unknown_encoding)
+
+    best_index = int(np.argmin(distances))
+    best_distance = float(distances[best_index])
+
+    tol = tolerance if tolerance is not None else get_match_tolerance()
+    if best_distance > tol:
+        return None
+
+    within_tol = [float(d) for d in distances if d <= tol]
+    if len(within_tol) > 1:
+        sorted_distances = sorted(within_tol)
+        if sorted_distances[1] - sorted_distances[0] < uniqueness_margin:
+            return None
+
+    confidence = max(0.0, (1.0 - best_distance) * 100)
+
+    return {
+        'employee': candidates[best_index],
+        'distance': best_distance,
+        'confidence': confidence,
+    }
 
 
 def validate_face_image(image_path):

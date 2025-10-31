@@ -1,0 +1,185 @@
+{% load static %}
+
+<!-- Mobile Bottom Nav -->
+<nav class="mobile-bottom-nav d-lg-none">
+  <div class="mobile-bottom-nav__container">
+    <!-- Dashboard -->
+    <a href="{% url 'employees:employee_dashboard' %}" class="mobile-bottom-nav__item {% if request.resolver_match.url_name == 'employee_dashboard' %}active{% endif %}" aria-label="Dashboard">
+      <i class="bx bx-home"></i>
+      <span>Home</span>
+    </a>
+
+    <!-- Attendance -->
+    <a href="{% url 'employees:attendance_calendar' %}" class="mobile-bottom-nav__item {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}" aria-label="Attendance">
+      <i class="bx bx-calendar"></i>
+      <span>Attendance</span>
+    </a>
+
+    <!-- Center Action -->
+    <div class="mobile-bottom-nav__center">
+      {% with requires_registration=requires_face_registration|default:False %}
+      {% with has_checked_in=has_checked_in_today|default:False %}
+      {% with attendance=today_attendance|default:None %}
+        {% if requires_registration %}
+          <a href="{% url 'employees:face_register' %}?next={% url 'employees:check_in' %}" class="mobile-bottom-nav__cta btn btn-warning" title="Complete Face ID">
+            <i class="bx bx-face"></i>
+          </a>
+        {% elif not has_checked_in %}
+          <a href="{% url 'employees:check_in' %}" class="mobile-bottom-nav__cta btn btn-primary" title="Check In">
+            <i class="bx bx-log-in"></i>
+          </a>
+        {% elif attendance and attendance.check_out_time %}
+          <span class="mobile-bottom-nav__cta mobile-bottom-nav__cta--done" aria-disabled="true" title="All Done">
+            <i class="bx bx-check"></i>
+          </span>
+        {% elif attendance %}
+          <a href="{% url 'employees:check_in' %}?action=checkout" class="mobile-bottom-nav__cta btn btn-warning" title="Check Out">
+            <i class="bx bx-log-out"></i>
+          </a>
+        {% else %}
+          <a href="{% url 'employees:check_in' %}" class="mobile-bottom-nav__cta btn btn-primary" title="Attendance">
+            <i class="bx bx-log-in"></i>
+          </a>
+        {% endif %}
+      {% endwith %}
+      {% endwith %}
+      {% endwith %}
+    </div>
+
+    <!-- Profile -->
+    <a href="{% url 'employees:employee_profile' %}" class="mobile-bottom-nav__item {% if 'profile' in request.resolver_match.url_name %}active{% endif %}" aria-label="Profile">
+      <i class="bx bx-user"></i>
+      <span>Profile</span>
+    </a>
+
+    <!-- More -->
+    <div class="dropdown mobile-bottom-nav__item dropup">
+      <a href="#" class="mobile-bottom-nav__dropdown" id="mobileMoreDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bx bx-dots-horizontal-rounded"></i>
+        <span>More</span>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="mobileMoreDropdown">
+        <li><a class="dropdown-item" href="{% url 'employees:employee_tickets' %}"><i class="bx bx-support me-2"></i>Support</a></li>
+        <li><a class="dropdown-item" href="{% url 'employees:my_attendance_logs' %}"><i class="bx bx-history me-2"></i>My Logs</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{% url 'employees:logout' %}"><i class="bx bx-power-off me-2"></i>Logout</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<style>
+  @media (max-width: 991.98px) {
+    body {
+      padding-bottom: 90px !important;
+    }
+
+    .modal {
+      z-index: 1100 !important;
+    }
+
+    .btn, .form-control, .form-select {
+      min-height: 44px;
+    }
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1080;
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.9);
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.12);
+  }
+
+  .mobile-bottom-nav__container {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 0.4rem 1.2rem 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: end;
+    column-gap: 0.6rem;
+    position: relative;
+  }
+
+  .mobile-bottom-nav__item,
+  .mobile-bottom-nav__dropdown {
+    text-decoration: none;
+    color: #6c757d;
+    font-size: 0.7rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.35rem 0;
+  }
+
+  .mobile-bottom-nav__item i,
+  .mobile-bottom-nav__dropdown i {
+    font-size: 1.45rem;
+    line-height: 1;
+  }
+
+  .mobile-bottom-nav__item.active,
+  .mobile-bottom-nav__item:hover,
+  .mobile-bottom-nav__dropdown:hover,
+  .mobile-bottom-nav__dropdown.show {
+    color: var(--bs-primary);
+    font-weight: 600;
+  }
+
+  .mobile-bottom-nav__center {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .mobile-bottom-nav__cta {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    border: none;
+    box-shadow: 0 10px 30px rgba(115, 103, 240, 0.25);
+  }
+
+  .mobile-bottom-nav__cta.btn-warning {
+    box-shadow: 0 10px 30px rgba(255, 171, 0, 0.25);
+    color: #b35a00;
+  }
+
+  .mobile-bottom-nav__cta--done {
+    background: linear-gradient(135deg, #edf2ff 0%, #e0f7f1 100%);
+    color: #38c172;
+    border: 1px solid rgba(56, 193, 114, 0.3);
+    box-shadow: none;
+    cursor: default;
+  }
+
+  @media (max-width: 400px) {
+    .mobile-bottom-nav__container {
+      padding: 0.4rem 0.75rem 0.7rem;
+      column-gap: 0.4rem;
+    }
+
+    .mobile-bottom-nav__cta {
+      width: 56px;
+      height: 56px;
+      font-size: 1.4rem;
+    }
+
+    .mobile-bottom-nav__item,
+    .mobile-bottom-nav__dropdown {
+      font-size: 0.65rem;
+      gap: 0.2rem;
+    }
+  }
+</style>

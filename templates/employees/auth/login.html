@@ -27,6 +27,13 @@
         
             <p class="mb-6 text-center">Please sign-in to your account</p>
 
+            {% if login_error %}
+              <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="bx bx-error-circle me-2"></i>
+                <span>{{ login_error }}</span>
+              </div>
+            {% endif %}
+
             <form id="formAuthentication" class="mb-6" method="post">
               {% csrf_token %}
               {% if request.GET.next %}
@@ -35,7 +42,8 @@
               <div class="mb-6">
                 <label for="email" class="form-label">Email or Username</label>
                 <input type="text" class="form-control" id="email" name="email-username"
-                       placeholder="Enter your email or username" autofocus="autofocus" required/>
+                       placeholder="Enter your email or username" autofocus="autofocus" required
+                       value="{{ entered_username|default:'' }}"/>
               </div>
               <div class="mb-6 form-password-toggle">
                 <label class="form-label" for="password">Password</label>

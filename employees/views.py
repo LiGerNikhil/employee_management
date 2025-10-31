@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -7,7 +7,7 @@ from django.views.generic import TemplateView, ListView, CreateView, UpdateView,
 from django.urls import reverse_lazy, reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_http_methods
-from django.db.models import Q
+from django.db.models import Q, Min, Max
 from django.utils import timezone
 from django.http import JsonResponse
 from django.template.loader import render_to_string
@@ -23,13 +23,78 @@ from PIL import Image
 import base64
 
 from .models import Employee, Attendance
+from django.contrib.auth.forms import PasswordChangeForm
+
 from .forms import EmployeeForm, EmployeeUpdateForm, SuperAdminProfileForm
-from .face_utils import extract_face_encoding, extract_face_encoding_from_file, compare_faces, get_match_tolerance
+from .face_utils import (
+    extract_face_encoding,
+    extract_face_encoding_from_file,
+    compare_faces,
+    get_match_tolerance,
+    get_strict_match_tolerance,
+    find_best_face_match,
+)
 from django.db import transaction
 
 from django.contrib.auth.hashers import make_password
-from django.utils import timezone
 from .models import PasswordResetRequest
+
+from datetime import datetime, date, timedelta
+
+
+def get_working_days(start_date: date, end_date: date) -> int:
+    """Return count of working days between two dates inclusive, excluding Sundays and 1st/3rd/5th Saturdays."""
+
+    if start_date > end_date:
+        return 0
+
+    total_days = 0
+    current = start_date
+    while current <= end_date:
+        weekday = current.weekday()  # Monday=0 ... Sunday=6
+
+        if weekday == 6:
+            current += timedelta(days=1)
+            continue
+
+        if weekday == 5:
+            saturday_count = 0
+            for day in range(1, current.day + 1):
+                if datetime(current.year, current.month, day).weekday() == 5:
+                    saturday_count += 1
+
+            if saturday_count in {1, 3, 5}:
+                current += timedelta(days=1)
+                continue
+
+        total_days += 1
+        current += timedelta(days=1)
+
+    return total_days
+
+
+def calculate_attendance_metrics(attendance_qs, start_date: date, end_date: date):
+    """Calculate working day metrics for attendance records within provided date range."""
+
+    working_days = get_working_days(start_date, end_date)
+
+    present = attendance_qs.filter(check_out_time__isnull=False, half_day=False).count()
+    half_days = attendance_qs.filter(check_out_time__isnull=False, half_day=True).count()
+
+    absent = max(working_days - (present + half_days), 0)
+
+    attendance_percentage = 0
+    if working_days:
+        attendance_percentage = ((present + (half_days * 0.5)) / working_days) * 100
+
+    return {
+        'total_working_days': working_days,
+        'present_days': present,
+        'half_day_days': half_days,
+        'absent_days': absent,
+        'attendance_percentage': round(attendance_percentage, 1),
+    }
+
 
 # Helper functions to check user roles
 def is_superadmin(user):
@@ -79,8 +144,12 @@ class LoginView(TemplateView):
             messages.success(request, f'Welcome back, {user.get_full_name() or user.username}!')
             return self.redirect_authenticated_user(user)
         else:
-            messages.error(request, 'Invalid email/username or password.')
-            return render(request, 'employees/auth/login.html', self.get_context_data())
+            context = self.get_context_data()
+            context.update({
+                'login_error': 'Invalid email/username or password.',
+                'entered_username': username,
+            })
+            return render(request, 'employees/auth/login.html', context)
 
     def get_context_data(self, **kwargs):
         context = TemplateLayout.init(self, super().get_context_data(**kwargs))
@@ -375,27 +444,46 @@ def my_attendance_logs(request):
     # Base queryset
     attendance_records = Attendance.objects.filter(employee=employee).order_by('-date')
     
-    # Apply filters if provided
-    if month and year:
-        attendance_records = attendance_records.filter(
-            date__month=int(month),
-            date__year=int(year)
-        )
-    elif month:
-        attendance_records = attendance_records.filter(date__month=int(month))
-    elif year:
-        attendance_records = attendance_records.filter(date__year=int(year))
-    
+    filter_kwargs = {}
+    if month:
+        filter_kwargs['date__month'] = int(month)
+    if year:
+        filter_kwargs['date__year'] = int(year)
+
+    if filter_kwargs:
+        attendance_records = attendance_records.filter(**filter_kwargs)
+
     # Pagination
     paginator = Paginator(attendance_records, 20)  # 20 records per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
+
     # Calculate statistics
+    aggregated_metrics = {}
+    if attendance_records.exists():
+        date_bounds = attendance_records.aggregate(
+            first_date=Min('date'),
+            last_date=Max('date'),
+        )
+
+        start_date = date_bounds['first_date']
+        end_date = date_bounds['last_date']
+
+        if start_date and end_date:
+            aggregated_metrics = calculate_attendance_metrics(attendance_records, start_date, end_date)
+    else:
+        aggregated_metrics = {
+            'total_working_days': 0,
+            'present_days': 0,
+            'half_day_days': 0,
+            'absent_days': 0,
+            'attendance_percentage': 0,
+        }
+
     total_days = attendance_records.count()
     complete_days = attendance_records.filter(check_out_time__isnull=False).count()
     incomplete_days = total_days - complete_days
-    
+
     # Calculate total hours worked (only for complete days)
     total_hours = 0
     for record in attendance_records.filter(check_out_time__isnull=False):
@@ -416,6 +504,11 @@ def my_attendance_logs(request):
         'complete_days': complete_days,
         'incomplete_days': incomplete_days,
         'total_hours': round(total_hours, 2),
+        'total_working_days': aggregated_metrics.get('total_working_days', 0),
+        'present_days': aggregated_metrics.get('present_days', 0),
+        'absent_days': aggregated_metrics.get('absent_days', 0),
+        'half_day_days': aggregated_metrics.get('half_day_days', 0),
+        'attendance_percentage': aggregated_metrics.get('attendance_percentage', 0),
         'available_years': available_years,
         'selected_month': month,
         'selected_year': year,
@@ -716,6 +809,31 @@ def superadmin_profile_edit(request):
         'user': user,
     })
     return render(request, 'employees/superadmin_profile_edit.html', context)
+
+
+@login_required
+@user_passes_test(is_superadmin)
+def superadmin_change_password(request):
+    """Allow superadmin to update their own password"""
+    context = TemplateLayout.init(self={}, context={})
+
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Your password has been updated successfully.')
+            return redirect('employees:superadmin_profile')
+        else:
+            messages.error(request, 'Please correct the errors below to update your password.')
+    else:
+        form = PasswordChangeForm(request.user)
+
+    context.update({
+        'layout_path': TemplateHelper.set_layout('layout_vertical.html', context),
+        'form': form,
+    })
+    return render(request, 'employees/superadmin_change_password.html', context)
 def get_client_ip(request):
     """Get client IP address from request"""
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -834,7 +952,6 @@ def check_in(request):
             checkin_encoding = extract_face_encoding_from_file(check_in_photo)
 
             if checkin_encoding is None:
-                # Log failed attempt
                 AttendanceLog.objects.create(
                     employee=employee,
                     action='check_in_failed',
@@ -847,11 +964,23 @@ def check_in(request):
                 messages.error(request, 'No face detected or multiple faces detected. Please try again with a clear face in frame.')
                 return redirect('employees:check_in')
 
-            tol = get_match_tolerance()
+            if stored_encoding is None:
+                AttendanceLog.objects.create(
+                    employee=employee,
+                    action='check_in_failed',
+                    success=False,
+                    failure_reason='no_face_registered',
+                    ip_address=get_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                    notes='Stored face encoding missing for employee'
+                )
+                messages.error(request, 'Your face data is missing. Please re-register your face before checking in.')
+                return redirect('employees:face_register')
+
+            tol = get_strict_match_tolerance()
             result = compare_faces(stored_encoding, checkin_encoding, tolerance=tol)
 
             if not result['match']:
-                # Log failed attempt
                 AttendanceLog.objects.create(
                     employee=employee,
                     action='check_in_failed',
@@ -860,9 +989,33 @@ def check_in(request):
                     confidence=result['confidence'],
                     ip_address=get_client_ip(request),
                     user_agent=request.META.get('HTTP_USER_AGENT', ''),
-                    notes=f'Face verification failed with {result["confidence"]:.1f}% confidence'
+                    notes=f'Face verification failed with {result["confidence"]:.1f}% confidence (strict tolerance)'
                 )
                 messages.error(request, 'Face does not match the registered face. Check-in denied.')
+                return redirect('employees:check_in')
+
+            match_info = find_best_face_match(
+                checkin_encoding,
+                Employee.objects.filter(face_registered=True),
+                tolerance=get_match_tolerance(),
+            )
+
+            if not match_info or match_info['employee'].pk != employee.pk:
+                matched_employee = match_info['employee'].full_name if match_info else None
+                AttendanceLog.objects.create(
+                    employee=employee,
+                    action='check_in_failed',
+                    success=False,
+                    failure_reason='face_not_matched',
+                    confidence=match_info['confidence'] if match_info else None,
+                    ip_address=get_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                    notes='Face appears to match another employee' if match_info else 'No unique match identified'
+                )
+                if matched_employee:
+                    messages.error(request, f'Face verification failed. This face matches another employee ({matched_employee}). Check-in denied.')
+                else:
+                    messages.error(request, 'Face verification failed. We could not uniquely match your face to your profile. Check-in denied.')
                 return redirect('employees:check_in')
 
             # Passed verification, create attendance
@@ -874,7 +1027,7 @@ def check_in(request):
                 }
             )
             # If already exists and has check_in_time, keep it but allow updating photo and location
-            attendance.check_in_photo = check_in_photo
+            attendance.check_in_photo.save(check_in_photo.name, check_in_photo, save=False)
             attendance.check_in_latitude = user_latitude
             attendance.check_in_longitude = user_longitude
             attendance.save()
@@ -932,14 +1085,44 @@ class AttendanceListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = TemplateLayout.init(self, super().get_context_data(**kwargs))
+
+        today = timezone.now().date()
+        queryset = self.get_queryset()
+
+        metrics = {}
+        if queryset.exists():
+            date_bounds = queryset.aggregate(
+                first_date=Min('date'),
+                last_date=Max('date'),
+            )
+
+            start_date = date_bounds['first_date']
+            end_date = date_bounds['last_date']
+
+            if start_date and end_date:
+                metrics = calculate_attendance_metrics(queryset, start_date, end_date)
+        else:
+            metrics = {
+                'total_working_days': 0,
+                'present_days': 0,
+                'half_day_days': 0,
+                'absent_days': 0,
+                'attendance_percentage': 0,
+            }
+
         context.update({
             'layout_path': TemplateHelper.set_layout('layout_vertical.html', context),
-            'today_count': Attendance.objects.filter(date=timezone.now().date()).count(),
+            'today_count': Attendance.objects.filter(date=today).count(),
             'unique_employees': Attendance.objects.filter(
-                date=timezone.now().date()
+                date=today
             ).values('employee').distinct().count(),
             'total_employees': Employee.objects.count(),
-            'today': timezone.now().date(),
+            'today': today,
+            'total_working_days': metrics.get('total_working_days', 0),
+            'present_days': metrics.get('present_days', 0),
+            'half_day_days': metrics.get('half_day_days', 0),
+            'absent_days': metrics.get('absent_days', 0),
+            'attendance_percentage': metrics.get('attendance_percentage', 0),
         })
         return context
 
@@ -1056,18 +1239,29 @@ def face_registration(request):
         })
         return render(request, 'employees/face_register.html', context)
 
-    # POST: process uploaded base64 image
-    image_payload = request.POST.get('image')
-    if not image_payload or 'base64,' not in image_payload:
-        return JsonResponse({'success': False, 'error': 'Invalid image data supplied'}, status=400)
+    # POST: process uploaded image (base64 or file)
+    image_payload = request.POST.get('image') or request.POST.get('image_base64')
+    image_file = request.FILES.get('image_file') or request.FILES.get('upload_image')
+
+    if not image_payload and not image_file:
+        return JsonResponse({'success': False, 'error': 'No image provided. Please capture or upload a clear photo.'}, status=400)
 
     try:
-        image_data = base64.b64decode(image_payload.split('base64,')[1])
+        if image_file:
+            image_bytes = image_file.read()
+        else:
+            payload = image_payload
+            if 'base64,' in payload:
+                payload = payload.split('base64,', 1)[1]
+            try:
+                image_bytes = base64.b64decode(payload)
+            except (base64.binascii.Error, ValueError) as exc:
+                return JsonResponse({'success': False, 'error': 'Unable to read the captured image. Please try again.'}, status=400)
 
-        nparr = np.frombuffer(image_data, np.uint8)
+        nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if img is None:
-            return JsonResponse({'success': False, 'error': 'Could not decode image'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Image format is not supported. Try retaking or uploading a JPG/PNG photo.'}, status=400)
 
         rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         face_locations = face_recognition.face_locations(rgb_img)
@@ -1081,28 +1275,30 @@ def face_registration(request):
 
         # Prevent registering duplicate faces for different employees
         tolerance = get_match_tolerance()
-        conflicting_employee = None
-        for other in Employee.objects.filter(face_registered=True).exclude(pk=employee.pk).iterator():
-            known_encoding = other.get_face_encoding()
-            if known_encoding is None:
-                continue
-            result = compare_faces(known_encoding, face_encoding, tolerance=tolerance)
-            if result['match']:
-                conflicting_employee = other
-                break
+        is_unique, conflict_emp, conflict_distance = is_encoding_unique(
+            face_encoding,
+            exclude_employee_id=employee.pk,
+            tolerance=tolerance,
+        )
 
-        if conflicting_employee:
+        if not is_unique and conflict_emp:
             return JsonResponse({
                 'success': False,
                 'error': (
-                    'This face already belongs to another employee. '
-                    'Please contact your administrator if you believe this is a mistake.'
-                )
+                    'This face appears to match another employee on record '
+                    'and cannot be registered again. If you believe this is an error, '
+                    'contact your administrator.'
+                ),
+                'conflict_employee': conflict_emp.full_name,
+                'distance': conflict_distance,
             }, status=400)
 
         # Persist encoding and profile photo
         employee.set_face_encoding(face_encoding)
-        _, buffer = cv2.imencode('.jpg', img)
+        success, buffer = cv2.imencode('.jpg', img)
+        if not success:
+            return JsonResponse({'success': False, 'error': 'Unable to process image. Please try again.'}, status=400)
+
         file_name = f'profile_{employee.id}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.jpg'
         employee.profile_picture.save(file_name, ContentFile(buffer.tobytes()), save=False)
         employee.save()
@@ -1364,12 +1560,10 @@ def check_out(request):
             return redirect('employees:check_in')
 
         try:
-            # Validation 5: Extract face from photo
             stored_encoding = employee.get_face_encoding()
             checkout_encoding = extract_face_encoding_from_file(check_out_photo)
-            
+
             if checkout_encoding is None:
-                # Log failed attempt
                 AttendanceLog.objects.create(
                     employee=employee,
                     action='check_out_failed',
@@ -1383,12 +1577,24 @@ def check_out(request):
                 messages.error(request, 'No face detected or multiple faces detected in the photo. Please try again with a clear face in frame.')
                 return redirect('employees:check_in')
 
-            # Validation 6: Face must match registered face
-            tol = get_match_tolerance()
-            result = compare_faces(stored_encoding, checkout_encoding, tolerance=tol)
-            
+            if stored_encoding is None:
+                AttendanceLog.objects.create(
+                    employee=employee,
+                    action='check_out_failed',
+                    success=False,
+                    failure_reason='no_face_registered',
+                    ip_address=get_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                    attendance=attendance,
+                    notes='Stored face encoding missing for employee'
+                )
+                messages.error(request, 'Your face data is missing. Please re-register your face before checking out.')
+                return redirect('employees:face_register')
+
+            strict_tol = get_strict_match_tolerance()
+            result = compare_faces(stored_encoding, checkout_encoding, tolerance=strict_tol)
+
             if not result['match']:
-                # Log failed attempt
                 AttendanceLog.objects.create(
                     employee=employee,
                     action='check_out_failed',
@@ -1398,14 +1604,39 @@ def check_out(request):
                     ip_address=get_client_ip(request),
                     user_agent=request.META.get('HTTP_USER_AGENT', ''),
                     attendance=attendance,
-                    notes=f'Face verification failed with {result["confidence"]:.1f}% confidence'
+                    notes=f'Face verification failed with {result["confidence"]:.1f}% confidence (strict tolerance)'
                 )
-                messages.error(request, f'Face verification failed. The captured face does not match your registered face (confidence: {result["confidence"]:.1f}%). Check-out denied.')
+                messages.error(request, 'Face verification failed. The captured face does not match your registered face. Check-out denied.')
+                return redirect('employees:check_in')
+
+            match_info = find_best_face_match(
+                checkout_encoding,
+                Employee.objects.filter(face_registered=True),
+                tolerance=get_match_tolerance(),
+            )
+
+            if not match_info or match_info['employee'].pk != employee.pk:
+                matched_employee = match_info['employee'].full_name if match_info else None
+                AttendanceLog.objects.create(
+                    employee=employee,
+                    action='check_out_failed',
+                    success=False,
+                    failure_reason='face_not_matched',
+                    confidence=match_info['confidence'] if match_info else None,
+                    ip_address=get_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                    attendance=attendance,
+                    notes='Face appears to match another employee' if match_info else 'No unique match identified'
+                )
+                if matched_employee:
+                    messages.error(request, f'Face verification failed. This face matches another employee ({matched_employee}). Check-out denied.')
+                else:
+                    messages.error(request, 'Face verification failed. We could not uniquely match your face to your profile. Check-out denied.')
                 return redirect('employees:check_in')
 
             # All validations passed - save check-out
             check_out_time = timezone.now()
-            attendance.check_out_photo = check_out_photo
+            attendance.check_out_photo.save(check_out_photo.name, check_out_photo, save=False)
             attendance.check_out_time = check_out_time
             attendance.check_out_latitude = user_latitude
             attendance.check_out_longitude = user_longitude

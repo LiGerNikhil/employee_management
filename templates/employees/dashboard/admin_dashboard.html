@@ -7,40 +7,780 @@
 
 {% block vendor_css %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'vendor/libs/apex-charts/apex-charts.css' %}"/>
+  <!-- Load critical CSS first -->
+  <style>
+    /* Critical CSS - Load above the fold styles here */
+    :root {
+      --primary-color: #7367F0;
+      --light: #F8F7FA;
+      --dark: #283046;
+      --border-radius-md: 0.75rem;
+      --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.08);
+      --transition-base: all 0.3s cubic-bezier(0.25, 0.8, 0.5, 1);
+    }
+    
+    /* Critical layout styles */
+    body { background-color: var(--light); color: var(--dark); }
+    .card { 
+      background: white; 
+      border-radius: var(--border-radius-md);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 1rem;
+    }
+    /* Add other critical styles that affect initial render */
+  </style>
+  
+  <!-- Defer non-critical CSS -->
+  <link rel="preload" href="{% static 'vendor/libs/apex-charts/apex-charts.css' %}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="{% static 'vendor/libs/apex-charts/apex-charts.css' %}"></noscript>
+  
+  <link rel="preload" href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}"></noscript>
+  
+  <!-- Load animate.css only if user hasn't set reduced motion -->
+  <script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css';
+      link.media = 'print';
+      link.onload = function() { this.media = 'all'; };
+      document.head.appendChild(link);
+    }
+  </script>
+  <style>
+    /* Move critical CSS to the head and keep only non-critical styles here */
+    :root {
+      /* Color System */
+      --primary-color: #7367F0;
+      --primary-light: #EAE8FD;
+      --success-color: #28C76F;
+      --warning-color: #FF9F43;
+      --danger-color: #EA5455;
+      --info-color: #00CFE8;
+      --dark: #283046;
+      --light: #F8F7FA;
+      --gray-100: #F2F2F6;
+      --gray-200: #E4E6EF;
+      --gray-300: #B4B7BD;
+      --gray-400: #A1A5B7;
+      --gray-500: #6F6B7D;
+      
+      /* Shadows & Elevation */
+      --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.05);
+      --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 4px 15px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+      --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.15);
+      
+      /* Transitions */
+      --transition-base: all 0.3s cubic-bezier(0.25, 0.8, 0.5, 1);
+      --transition-transform: transform 0.3s cubic-bezier(0.25, 0.8, 0.5, 1);
+      
+      /* Border Radius */
+      --border-radius-sm: 0.5rem;
+      --border-radius-md: 0.75rem;
+      --border-radius-lg: 1rem;
+      --border-radius-xl: 1.5rem;
+      
+      /* Spacing */
+      --spacer: 1rem;
+    }
+    
+    /* Use will-change for elements that will be animated */
+    .card, .btn, .stat-card {
+      will-change: transform, box-shadow;
+    }
+    
+    /* Base Styles */
+    body {
+      background-color: var(--light);
+      color: var(--dark);
+      line-height: 1.6;
+    }
+    
+    /* Card Styles */
+    .card {
+      border: none;
+      border-radius: var(--border-radius-md);
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition-base);
+      overflow: hidden;
+      background: white;
+      margin-bottom: var(--spacer);
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .card.hover-card {
+      transition: var(--transition-base);
+    }
+    
+    .card.hover-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    /* Stat Cards */
+    .stat-card {
+      border-left: 4px solid var(--primary-color);
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition-base);
+    }
+    
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+      opacity: 0;
+      transition: var(--transition-base);
+    }
+    
+    .stat-card:hover::before {
+      opacity: 1;
+    }
+    
+    .stat-card .card-body {
+      padding: 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .stat-card .icon-wrapper {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--border-radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 1rem;
+      background: rgba(115, 103, 240, 0.1);
+      color: var(--primary-color);
+      transition: var(--transition-base);
+    }
+    
+    .stat-card:hover .icon-wrapper {
+      transform: scale(1.05);
+      background: var(--primary-color);
+      color: white;
+    }
+    
+    .stat-card .icon-wrapper i {
+      font-size: 1.75rem;
+    }
+    
+    .stat-card h3 {
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    
+    .stat-card .stat-trend {
+      display: flex;
+      align-items: center;
+      font-size: 0.875rem;
+    }
+    
+    .stat-card .stat-trend i {
+      margin-right: 0.25rem;
+    }
+    
+    /* Welcome Card */
+    .welcome-card {
+      background: linear-gradient(135deg, var(--primary-color) 0%, #9C8CF9 100%);
+      border: none;
+      border-radius: var(--border-radius-lg);
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 4px 20px rgba(115, 103, 240, 0.3);
+      transition: var(--transition-base);
+    }
+    
+    .welcome-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 30px rgba(115, 103, 240, 0.4);
+    }
+    
+    .welcome-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+      pointer-events: none;
+      animation: rotate 20s linear infinite;
+    }
+    
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Buttons */
+    .welcome-card .btn-light {
+      background: rgba(255, 255, 255, 0.95);
+      border: none;
+      font-weight: 600;
+      padding: 0.625rem 1.5rem;
+      border-radius: var(--border-radius-sm);
+      transition: var(--transition-base);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      position: relative;
+      overflow: hidden;
+      z-index: 1;
+    }
+    
+    .welcome-card .btn-light:hover {
+      background: white;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .welcome-card .btn-light::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 5px;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.5);
+      opacity: 0;
+      border-radius: 100%;
+      transform: scale(1, 1) translate(-50%, -50%);
+      transform-origin: 50% 50%;
+    }
+    
+    .welcome-card .btn-light:focus:not(:active)::after {
+      animation: ripple 1s ease-out;
+    }
+    
+    @keyframes ripple {
+      0% {
+        transform: scale(0, 0);
+        opacity: 0.5;
+      }
+      100% {
+        transform: scale(40, 40);
+        opacity: 0;
+      }
+    }
+    
+    .welcome-card .btn-outline-light {
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 0.5rem 1.25rem;
+      border-radius: 0.5rem;
+      transition: all 0.3s ease;
+    }
+    
+    .welcome-card .btn-outline-light:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .welcome-illustration {
+      position: relative;
+      animation: float 6s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    /* Tables */
+    .table {
+      margin-bottom: 0;
+    }
+    
+    .table thead th {
+      border-top: none;
+      border-bottom: 1px solid var(--gray-200);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+      color: var(--gray-500);
+      padding: 1rem 1.5rem;
+      white-space: nowrap;
+    }
+    
+    .table tbody td {
+      padding: 1rem 1.5rem;
+      vertical-align: middle;
+      border-color: var(--gray-100);
+      transition: var(--transition-base);
+    }
+    
+    .table tbody tr {
+      transition: var(--transition-base);
+    }
+    
+    .table tbody tr:hover {
+      background-color: rgba(115, 103, 240, 0.03);
+    }
+    
+    .table tbody tr:hover td {
+      transform: translateX(4px);
+    }
+    
+    /* Status Badges */
+    .badge {
+      font-weight: 500;
+      padding: 0.4em 0.8em;
+      font-size: 0.8em;
+      letter-spacing: 0.3px;
+      border-radius: 50rem;
+      text-transform: capitalize;
+    }
+    
+    .badge-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    
+    /* Responsive Utilities */
+    @media (max-width: 768px) {
+      .welcome-card .col-md-8 {
+        margin-bottom: 1.5rem;
+      }
+      
+      .stat-card .d-flex {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .stat-card .icon-wrapper {
+        margin: 0 auto 1rem;
+      }
+      
+      .table-responsive {
+        border: none;
+      }
+      
+      .table thead {
+        display: none;
+      }
+      
+      .table tbody tr {
+        display: block;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--border-radius-sm);
+        overflow: hidden;
+      }
+      
+      .table tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border: none;
+        border-bottom: 1px solid var(--gray-100);
+      }
+      
+      .table tbody td:before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--gray-500);
+        margin-right: 1rem;
+        text-transform: capitalize;
+        font-size: 0.8rem;
+      }
+      
+      .table tbody tr:last-child td:last-child {
+        border-bottom: none;
+      }
+    }
+    /* Loading Animation */
+    @keyframes shine {
+      to {
+        background-position: 200% center;
+      }
+    }
+    
+    .card.loading {
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .card.loading::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0.1) 20%,
+        rgba(255, 255, 255, 0.2) 60%,
+        rgba(255, 255, 255, 0)
+      );
+      animation: shine 2s infinite;
+      z-index: 2;
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: var(--gray-100);
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--primary-color);
+      border-radius: 4px;
+      transition: all 0.3s ease;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--primary-dark);
+    }
+    
+    /* Custom Checkbox and Radio */
+    .form-check-input:checked {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+    
+    /* Custom Form Controls */
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 0.25rem rgba(115, 103, 240, 0.25);
+    }
+    
+    /* Print Styles */
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      
+      .card {
+        border: 1px solid #dee2e6 !important;
+        box-shadow: none !important;
+      }
+      
+      .table-responsive {
+        overflow: visible !important;
+      }
+    }
+  </style>
+  
+  <!-- Preload Animations -->
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"></noscript>
+  
+  <!-- Preload Font Awesome -->
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"></noscript>
 {% endblock vendor_css %}
 
 {% block vendor_js %}
   {{ block.super }}
-  <script src="{% static 'vendor/libs/apex-charts/apexcharts.js' %}"></script>
+  <!-- Defer non-critical JS -->
+  <script>
+    // Load scripts with better performance
+    function loadScript(src, callback) {
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.defer = true;
+      if (callback) script.onload = callback;
+      document.body.appendChild(script);
+    }
+    
+    // Load non-critical scripts after page load
+    window.addEventListener('load', function() {
+      // Load ApexCharts only if charts are in viewport
+      if (document.querySelector('.apexcharts-canvas')) {
+        loadScript('{% static 'vendor/libs/apex-charts/apexcharts.js' %}', function() {
+          // Initialize charts here if needed
+        });
+      }
+      
+      // Load perfect scrollbar only if needed
+      if (document.querySelector('.ps')) {
+        loadScript('{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.min.js' %}');
+      }
+      
+      // Load GSAP only if animations are needed and user hasn't set reduced motion
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js', function() {
+          // Initialize GSAP animations here
+        });
+      }
+    });
+  </script>
+  
+  <script>
+    // Initialize ApexCharts when document is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      // Optimized scroll animation with requestAnimationFrame
+      const animateOnScroll = () => {
+        const elements = document.querySelectorAll('[data-aos]');
+        if (!elements.length) return;
+        
+        // Use a single RAF for all animations
+        let ticking = false;
+        
+        const updateElements = () => {
+          const windowHeight = window.innerHeight;
+          const windowTop = window.scrollY;
+          const windowBottom = windowTop + windowHeight;
+          
+          elements.forEach(element => {
+            if (element._animated) return;
+            
+            const elementRect = element.getBoundingClientRect();
+            const elementTop = elementRect.top + windowTop;
+            const elementBottom = elementTop + elementRect.height;
+            
+            // Check if element is in viewport with 100px offset
+            if (elementBottom > windowTop + 100 && elementTop < windowBottom - 100) {
+              const animation = element.getAttribute('data-aos') || 'fade-up';
+              const delay = parseInt(element.getAttribute('data-aos-delay') || '0', 10);
+              const duration = parseInt(element.getAttribute('data-aos-duration') || '400', 10);
+              
+              element.style.transition = `opacity ${duration}ms ease, transform ${duration}ms ease`;
+              element.style.transitionDelay = `${delay}ms`;
+              
+              // Use requestAnimationFrame for smooth animation
+              requestAnimationFrame(() => {
+                element.style.opacity = '1';
+                element.style.transform = 'translateY(0)';
+                element._animated = true;
+              });
+            }
+          });
+          
+          ticking = false;
+        };
+        
+        const onScroll = () => {
+          if (!ticking) {
+            window.requestAnimationFrame(updateElements);
+            ticking = true;
+          }
+        };
+        
+        // Initial setup
+        elements.forEach(element => {
+          element.style.opacity = '0';
+          element.style.transform = 'translateY(20px)';
+          element.style.willChange = 'opacity, transform';
+        });
+        
+        // Throttled scroll event
+        window.addEventListener('scroll', onScroll, { passive: true });
+        
+        // Initial check
+        updateElements();
+        
+        // Cleanup function
+        return () => {
+          window.removeEventListener('scroll', onScroll);
+        };
+      };
+      
+      // Run animations when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', animateOnScroll);
+      } else {
+        animateOnScroll();
+      }
+        
+      // Initialize tooltips
+      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+      
+      // Add hover effect to cards
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-5px)';
+          this.style.transition = 'all 0.3s ease';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+        });
+      });
+      
+      // Initialize attendance chart if element exists
+      const attendanceChartEl = document.getElementById('attendanceChart');
+      if (attendanceChartEl) {
+        const options = {
+          series: [{
+            name: 'Check-ins',
+            data: [
+              {% for day in week_attendance %}
+                {{ day.count }}{% if not forloop.last %},{% endif %}
+              {% endfor %}
+            ]
+          }],
+          chart: {
+            height: 300,
+            type: 'area',
+            fontFamily: 'Inter, sans-serif',
+            toolbar: { show: false },
+            zoom: { enabled: false },
+            animations: {
+              enabled: true,
+              easing: 'easeinout',
+              speed: 800,
+              animateGradually: { enabled: true, delay: 150 },
+              dynamicAnimation: { enabled: true, speed: 350 }
+            }
+          },
+          colors: ['var(--primary-color)'],
+          dataLabels: { enabled: false },
+          stroke: { curve: 'smooth', width: 3, lineCap: 'round' },
+          fill: {
+            type: 'gradient',
+            gradient: {
+              shadeIntensity: 1,
+              opacityFrom: 0.7,
+              opacityTo: 0.3,
+              stops: [0, 90, 100]
+            }
+          },
+          xaxis: {
+            categories: [
+              {% for day in week_attendance %}
+                '{{ day.date }}'{% if not forloop.last %},{% endif %}
+              {% endfor %}
+            ],
+            labels: {
+              style: { colors: '#6c757d', fontSize: '12px', fontFamily: 'Inter, sans-serif' }
+            },
+            axisBorder: { show: false },
+            axisTicks: { show: false }
+          },
+          yaxis: {
+            min: 0,
+            labels: {
+              style: { colors: '#6c757d', fontSize: '12px', fontFamily: 'Inter, sans-serif' }
+            }
+          },
+          tooltip: {
+            enabled: true,
+            x: { show: false },
+            y: { formatter: val => `${val} ${val === 1 ? 'employee' : 'employees'}` },
+            marker: { show: false }
+          },
+          grid: {
+            show: true,
+            borderColor: '#f1f1f1',
+            strokeDashArray: 3,
+            position: 'back',
+            xaxis: { lines: { show: false } },
+            yaxis: { lines: { show: true } },
+            padding: { top: 0, right: 10, bottom: 0, left: 10 }
+          },
+          markers: {
+            size: 5,
+            strokeWidth: 2,
+            strokeOpacity: 1,
+            strokeColors: '#fff',
+            colors: ['var(--primary-color)'],
+            hover: { size: 7 }
+          }
+        };
+        
+        const chart = new ApexCharts(attendanceChartEl, options);
+        chart.render();
+      }
+    });
+  </script>
 {% endblock vendor_js %}
 
 {% block content %}
+  <!-- Simplified Loading Indicator -->
+  <div id="loadingIndicator" class="position-fixed top-0 start-0 w-100 h-3 bg-light" style="z-index: 9999; overflow: hidden;">
+    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%; height: 100%;"></div>
+  </div>
+  
+  <script>
+    // Hide loading indicator when everything is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      // Hide loading indicator immediately if page is cached
+      const loadingIndicator = document.getElementById('loadingIndicator');
+      if (loadingIndicator) {
+        loadingIndicator.style.opacity = '0';
+        setTimeout(() => {
+          loadingIndicator.style.display = 'none';
+        }, 300);
+      }
+    });
+    
+    // Fallback in case the page takes too long to load
+    setTimeout(function() {
+      const loadingIndicator = document.getElementById('loadingIndicator');
+      if (loadingIndicator) {
+        loadingIndicator.style.opacity = '0';
+        setTimeout(() => {
+          loadingIndicator.style.display = 'none';
+        }, 300);
+      }
+    }, 3000); // 3 second timeout as fallback
+  </script>
+
   <div class="row">
     <!-- Welcome Message -->
-    <div class="col-12 mb-4">
-      <div class="card bg-gradient-primary text-white overflow-hidden" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div class="d-flex align-items-start row">
-          <div class="col-sm-7">
-            <div class="card-body">
-              <h4 class="card-title text-white mb-3">👋 Welcome Back, Admin!</h4>
-              <p class="mb-4 text-white opacity-90">Manage your workforce efficiently with real-time insights and powerful tools.<br/>Your command center for all HR operations.</p>
-              <div class="d-flex gap-2 flex-wrap">
-                <a href="{% url 'employees:employee_create' %}" class="btn btn-light">
+    <div class="col-12 mb-4" data-aos="fade-up" data-aos-duration="800">
+      <div class="welcome-card">
+        <div class="d-flex align-items-start row g-0">
+          <div class="col-lg-7 p-4 p-md-5">
+            <div class="card-body p-0">
+              <h2 class="text-white mb-3 animate__animated animate__fadeInUp">👋 Welcome Back, Admin!</h2>
+              <p class="text-white-75 mb-4 animate__animated animate__fadeInUp animate__delay-1s" style="font-size: 1.1rem;">
+                Manage your workforce efficiently with real-time insights and powerful tools.<br/>
+                Your command center for all HR operations.
+              </p>
+              <div class="d-flex gap-3 flex-wrap animate__animated animate__fadeInUp animate__delay-1s">
+                <a href="{% url 'employees:employee_create' %}" class="btn btn-light" data-bs-toggle="tooltip" title="Add new employee to the system">
                   <i class="bx bx-user-plus me-1"></i>Add Employee
                 </a>
-                <a href="{% url 'employees:admin_attendance_calendar' %}" class="btn btn-outline-light">
+                <a href="{% url 'employees:admin_attendance_calendar' %}" class="btn btn-outline-light" data-bs-toggle="tooltip" title="View attendance calendar">
                   <i class="bx bx-calendar me-1"></i>Calendar
                 </a>
-                <a href="{% url 'employees:admin_tickets' %}" class="btn btn-outline-light">
+                <a href="{% url 'employees:admin_tickets' %}" class="btn btn-outline-light position-relative" data-bs-toggle="tooltip" title="View support tickets">
                   <i class="bx bx-support me-1"></i>Tickets
+                  {% if open_tickets > 0 %}
+                  <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
+                    {{ open_tickets }}
+                  </span>
+                  {% endif %}
                 </a>
               </div>
             </div>
           </div>
-          <div class="col-sm-5 text-center text-sm-left d-none d-sm-block">
-            <div class="card-body pb-0 px-0 px-md-6">
-              <img src="{% static 'img/illustrations/man-with-laptop.png' %}" height="175" alt="Admin Dashboard" style="filter: brightness(1.1);"/>
+          <div class="col-lg-5 d-none d-lg-flex align-items-center justify-content-center">
+            <div class="welcome-illustration">
+              <img src="{% static 'img/illustrations/man-with-laptop.png' %}" height="220" alt="Admin Dashboard" class="img-fluid"/>
             </div>
           </div>
         </div>
@@ -48,142 +788,113 @@
     </div>
 
     <!-- Statistics Cards -->
-    <div class="col-xl-3 col-md-6 col-12 mb-4">
-      <a href="{% url 'employees:employee_list' %}" class="text-decoration-none">
-        <div class="card h-100 stat-card">
+    <div class="col-xl-3 col-md-6 col-12 mb-4" data-aos="fade-up" data-aos-delay="100">
+      <div class="card h-100 stat-card border-start border-3 border-primary">
+        <a href="{% url 'employees:employee_list' %}" class="text-decoration-none text-dark">
           <div class="card-body">
-            <div class="d-flex align-items-center mb-3">
-              <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
-                <div class="avatar-initial bg-primary rounded">
-                  <i class="bx bx-group icon-24px text-white"></i>
-                </div>
+            <div class="d-flex align-items-center">
+              <div class="icon-wrapper bg-soft-primary">
+                <i class="bx bx-group text-primary"></i>
               </div>
               <div class="flex-grow-1">
                 <span class="d-block text-muted small mb-1">Total Employees</span>
-                <h3 class="mb-0">{{ total_employees }}</h3>
+                <h3 class="mb-1">{{ total_employees }}</h3>
+                <div class="stat-trend text-success">
+                  <i class='bx bxs-up-arrow-alt'></i> {{ active_employees }} Active
+                </div>
               </div>
             </div>
-            <div class="d-flex align-items-center justify-content-between">
-              <small class="text-success fw-medium">
-                <i class="bx bx-up-arrow-alt"></i> All Active
-              </small>
-              <i class="bx bx-chevron-right text-muted"></i>
-            </div>
           </div>
-        </div>
-      </a>
+          <div class="card-footer bg-transparent border-top d-flex align-items-center justify-content-between py-2">
+            <span class="small text-muted">View all employees</span>
+            <i class='bx bx-chevron-right text-muted'></i>
+          </div>
+        </a>
+      </div>
     </div>
 
-    <div class="col-xl-3 col-md-6 col-12 mb-4">
-      <a href="{% url 'employees:attendance_list' %}" class="text-decoration-none">
-        <div class="card h-100 stat-card">
+    <div class="col-xl-3 col-md-6 col-12 mb-4" data-aos="fade-up" data-aos-delay="200">
+      <div class="card h-100 stat-card border-start border-3 border-success">
+        <a href="{% url 'employees:attendance_list' %}" class="text-decoration-none text-dark">
           <div class="card-body">
-            <div class="d-flex align-items-center mb-3">
-              <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
-                <div class="avatar-initial bg-success rounded">
-                  <i class="bx bx-check-circle icon-24px text-white"></i>
-                </div>
+            <div class="d-flex align-items-center">
+              <div class="icon-wrapper bg-soft-success">
+                <i class="bx bx-check-circle text-success"></i>
               </div>
               <div class="flex-grow-1">
                 <span class="d-block text-muted small mb-1">Today's Check-ins</span>
-                <h3 class="mb-0">{{ today_checkins }}</h3>
+                <h3 class="mb-1">{{ today_checkins }}</h3>
+                <div class="stat-trend text-success">
+                  <i class='bx bx-time'></i> {{ today_checkouts }} Checked Out
+                </div>
               </div>
             </div>
-            <div class="d-flex align-items-center justify-content-between">
-              <small class="text-success fw-medium">
-                <i class="bx bx-trending-up"></i> Active Now
-              </small>
-              <i class="bx bx-chevron-right text-muted"></i>
-            </div>
           </div>
-        </div>
-      </a>
+          <div class="card-footer bg-transparent border-top d-flex align-items-center justify-content-between py-2">
+            <span class="small text-muted">View attendance</span>
+            <i class='bx bx-chevron-right text-muted'></i>
+          </div>
+        </a>
+      </div>
     </div>
 
-    <div class="col-xl-3 col-md-6 col-12 mb-4">
-      <a href="{% url 'employees:admin_attendance_calendar' %}" class="text-decoration-none">
-        <div class="card h-100 stat-card">
+    <div class="col-xl-3 col-md-6 col-12 mb-4" data-aos="fade-up" data-aos-delay="300">
+      <div class="card h-100 stat-card border-start border-3 border-info">
+        <a href="{% url 'employees:admin_tickets' %}" class="text-decoration-none text-dark">
           <div class="card-body">
-            <div class="d-flex align-items-center mb-3">
-              <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
-                <div class="avatar-initial bg-info rounded">
-                  <i class="bx bx-calendar icon-24px text-white"></i>
-                </div>
+            <div class="d-flex align-items-center">
+              <div class="icon-wrapper bg-soft-warning">
+                <i class="bx bx-support text-warning"></i>
               </div>
               <div class="flex-grow-1">
-                <span class="d-block text-muted small mb-1">Attendance</span>
-                <h3 class="mb-0">Calendar</h3>
-              </div>
-            </div>
-            <div class="d-flex align-items-center justify-content-between">
-              <small class="text-info fw-medium">
-                <i class="bx bx-calendar-event"></i> View Monthly
-              </small>
-              <i class="bx bx-chevron-right text-muted"></i>
-            </div>
-          </div>
-        </div>
-      </a>
-    </div>
-
-    <div class="col-xl-3 col-md-6 col-12 mb-4">
-      <a href="{% url 'employees:admin_tickets' %}" class="text-decoration-none">
-        <div class="card h-100 stat-card">
-          <div class="card-body">
-            <div class="d-flex align-items-center mb-3">
-              <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
-                <div class="avatar-initial bg-warning rounded">
-                  <i class="bx bx-support icon-24px text-white"></i>
+                <span class="d-block text-muted small mb-1">Open Tickets</span>
+                <h3 class="mb-1">{{ open_tickets }}</h3>
+                <div class="stat-trend text-warning">
+                  <i class='bx bx-error-circle'></i> {{ urgent_tickets }} Urgent
                 </div>
               </div>
-              <div class="flex-grow-1">
-                <span class="d-block text-muted small mb-1">Support Tickets</span>
-                <h3 class="mb-0">{{ open_tickets }}</h3>
-              </div>
-            </div>
-            <div class="d-flex align-items-center justify-content-between">
-              <small class="text-warning fw-medium">
-                <i class="bx bx-message-dots"></i> Open Tickets
-              </small>
-              <i class="bx bx-chevron-right text-muted"></i>
             </div>
           </div>
-        </div>
-      </a>
+          <div class="card-footer bg-transparent border-top d-flex align-items-center justify-content-between py-2">
+            <span class="small text-muted">View all tickets</span>
+            <i class='bx bx-chevron-right text-muted'></i>
+          </div>
+        </a>
+      </div>
     </div>
 
-    <!-- Password Reset Requests Card -->
-    <div class="col-xl-3 col-md-6 col-12 mb-4">
-      <a href="{% url 'employees:password_reset_requests' %}" class="text-decoration-none">
-        <div class="card h-100 stat-card {% if pending_password_requests > 0 %}border-danger{% endif %}" style="border-width: 2px;">
+    <div class="col-xl-3 col-md-6 col-12 mb-4" data-aos="fade-up" data-aos-delay="400">
+      <div class="card h-100 stat-card border-start border-3 border-danger">
+        <a href="{% url 'employees:password_reset_requests' %}" class="text-decoration-none text-dark">
           <div class="card-body">
-            <div class="d-flex align-items-center mb-3">
-              <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
-                <div class="avatar-initial bg-danger rounded">
-                  <i class="bx bx-key icon-24px text-white"></i>
-                </div>
+            <div class="d-flex align-items-center">
+              <div class="icon-wrapper bg-soft-danger">
+                <i class="bx bx-key text-danger"></i>
               </div>
               <div class="flex-grow-1">
                 <span class="d-block text-muted small mb-1">Password Requests</span>
-                <h3 class="mb-0 text-danger">{{ pending_password_requests }}</h3>
+                <h3 class="mb-1">{{ pending_password_requests }}</h3>
+                <div class="stat-trend text-danger">
+                  <i class='bx bx-time-five'></i> Action Required
+                </div>
               </div>
             </div>
-            <div class="d-flex align-items-center justify-content-between">
-              <small class="text-danger fw-medium">
-                <i class="bx bx-time-five"></i> Pending
-              </small>
-              <i class="bx bx-chevron-right text-muted"></i>
-            </div>
           </div>
-        </div>
-      </a>
+          <div class="card-footer bg-transparent border-top d-flex align-items-center justify-content-between py-2">
+            <span class="small text-muted">Review requests</span>
+            <i class='bx bx-chevron-right text-muted'></i>
+          </div>
+        </a>
+      </div>
     </div>
+
+
   </div>
 
   <!-- Recent Activity Section -->
   <div class="row">
     <!-- Recent Employees -->
-    <div class="col-xl-6 col-lg-12 col-md-12 mb-4">
+    <div class="col-xl-6 col-lg-12 col-md-12 mb-4" data-aos="fade-up" data-aos-delay="200">
       <div class="card h-100 hover-card">
         <div class="card-header d-flex align-items-center justify-content-between pb-3">
           <div>
@@ -343,7 +1054,7 @@
 
   <!-- Quick Actions -->
   <div class="row">
-    <div class="col-12 mb-4">
+    <div class="col-12 mb-4" data-aos="fade-up" data-aos-delay="400">
       <div class="card">
         <div class="card-header pb-3">
           <h5 class="card-title m-0 mb-1">Quick Actions</h5>
@@ -579,14 +1290,39 @@ html {
 {% block page_js %}
   {{ block.super }}
   <script>
-    // Smooth animations on load
+    // Initialize ApexCharts
     document.addEventListener('DOMContentLoaded', function() {
+      // Initialize tooltips
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl, {
+          trigger: 'hover',
+          placement: 'top',
+          container: 'body',
+          animation: true
+        });
+      });
+      
+      // Add loading class to cards
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        card.classList.add('loading');
+        setTimeout(() => {
+          card.classList.remove('loading');
+        }, 100);
+      });
+      
       // Add staggered animation to cards
       const cards = document.querySelectorAll('.card');
       cards.forEach((card, index) => {
         card.style.animationDelay = `${index * 0.1}s`;
       });
       
+      // Optional: Remove auto-refresh or increase interval
+      // Uncomment if you want auto-refresh
+      // setInterval(function() {
+      //   location.reload();
+      // }, 60000); // Refresh every 60 seconds instead of 30
       // Add ripple effect to stat cards
       const statCards = document.querySelectorAll('.stat-card');
       statCards.forEach(card => {

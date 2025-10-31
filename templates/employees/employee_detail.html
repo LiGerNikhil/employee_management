@@ -111,7 +111,7 @@
               <strong>Aadhar Number:</strong>
             </div>
             <div class="col-sm-8">
-              {{ employee.aadhar_card_number|slice:":4" }}****{{ employee.aadhar_card_number|slice:"-4:" }}
+              {{ employee.aadhar_card_number|default:"Not provided" }}
             </div>
           </div>
 
@@ -129,9 +129,9 @@
               <strong>Bank Account:</strong>
             </div>
             <div class="col-sm-8">
-              {{ employee.account_number|slice:":4" }}****{{ employee.account_number|slice:"-4:" }}
+              {{ employee.account_number|default:"Not provided" }}
               <br>
-              <small class="text-muted">IFSC: {{ employee.ifsc_code }}</small>
+              <small class="text-muted">IFSC: {{ employee.ifsc_code|default:"Not provided" }}</small>
             </div>
           </div>
 

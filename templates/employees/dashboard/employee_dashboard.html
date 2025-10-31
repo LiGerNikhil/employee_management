@@ -4,399 +4,686 @@
 
 {% block title %}My Dashboard | Employee Management System{% endblock %}
 
+{% block page_css %}
+{{ block.super }}
+<style>
+:root {
+  --app-radius: 18px;
+  --app-soft-bg: #f4f6fb;
+  --app-card-bg: #ffffff;
+  --app-muted: #6c7383;
+  --app-border: rgba(17, 24, 39, 0.06);
+  --app-shadow: 0 14px 40px rgba(15, 23, 42, 0.12);
+}
+
+body {
+  background: var(--app-soft-bg);
+}
+
+.app-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  padding-bottom: 1rem;
+}
+
+.app-card,
+.app-quick-card,
+.app-list-card {
+  background: var(--app-card-bg);
+  border-radius: var(--app-radius);
+  border: 1px solid var(--app-border);
+  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.08);
+}
+
+.app-hero {
+  background: linear-gradient(135deg, #6366f1 0%, #764ba2 100%);
+  border-radius: calc(var(--app-radius) + 6px);
+  padding: 1.4rem 1.6rem;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-hero::after {
+  content: "";
+  position: absolute;
+  right: -40px;
+  top: -40px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.app-hero__title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.app-hero__subtitle {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.82);
+  margin-bottom: 1.1rem;
+}
+
+.app-hero__actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.app-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.78rem;
+}
+
+.app-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.8rem;
+}
+
+.app-stats__card {
+  border-radius: var(--app-radius);
+  padding: 1rem;
+  background: var(--app-card-bg);
+  border: 1px solid var(--app-border);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.app-stats__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.app-stats__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--app-muted);
+  margin-bottom: 0.15rem;
+}
+
+.app-stats__value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.app-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.app-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.25rem;
+}
+
+.app-section__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.app-section__link {
+  font-size: 0.78rem;
+  color: #6366f1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.app-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.app-quick-card {
+  border: none;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: flex-start;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.app-quick-card:hover {
+  transform: translateY(-4px);
+}
+
+.app-quick-card__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #fff;
+}
+
+.app-quick-card__title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.app-quick-card__desc {
+  font-size: 0.72rem;
+  color: var(--app-muted);
+}
+
+.attendance-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.attendance-feed__item {
+  border-radius: var(--app-radius);
+  border: 1px solid var(--app-border);
+  padding: 0.85rem 1rem;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.attendance-feed__date {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1f2937;
+}
+
+.attendance-feed__day {
+  font-size: 0.7rem;
+  color: var(--app-muted);
+}
+
+.attendance-feed__times {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.attendance-feed__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.attendance-feed__badge--in {
+  background: rgba(34, 197, 94, 0.15);
+  color: #0f9d5c;
+}
+
+.attendance-feed__badge--out {
+  background: rgba(239, 68, 68, 0.14);
+  color: #d63c3c;
+}
+
+.attendance-feed__badge--pending {
+  background: rgba(156, 163, 175, 0.18);
+  color: #475569;
+}
+
+.attendance-feed__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  min-width: 88px;
+}
+
+.attendance-feed__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.attendance-feed__status--complete {
+  color: #22c55e;
+}
+
+.attendance-feed__status--incomplete {
+  color: #f59e0b;
+}
+
+.attendance-feed__duration {
+  font-size: 0.74rem;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.app-pill-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.app-pill-actions .btn {
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.83rem;
+  font-weight: 600;
+  width: auto;
+}
+
+.app-status-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.app-status-card {
+  border-radius: var(--app-radius);
+  padding: 1rem;
+  background: var(--app-card-bg);
+  border: 1px solid var(--app-border);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.app-status-card__body {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.app-status-card__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: #fff;
+}
+
+.app-status-card__title {
+  font-size: 0.82rem;
+  color: var(--app-muted);
+  margin-bottom: 0.15rem;
+}
+
+.app-status-card__value {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.app-status-card__meta {
+  font-size: 0.75rem;
+  color: var(--app-muted);
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.app-list-card {
+  padding: 1.1rem;
+}
+
+.app-empty {
+  text-align: center;
+  padding: 2.4rem 0;
+  color: var(--app-muted);
+}
+
+.app-empty i {
+  font-size: 2.8rem;
+  margin-bottom: 0.4rem;
+}
+
+.app-empty .btn {
+  width: auto;
+}
+
+/* Desktop adjustments */
+@media (min-width: 992px) {
+  body {
+    background: #eef1f8;
+  }
+
+  .app-screen {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1.6rem;
+  }
+
+  .app-hero {
+    flex: 1 1 100%;
+  }
+
+  .app-stats,
+  .app-status-row {
+    flex-direction: row;
+  }
+
+  .app-section {
+    flex: 1 1 calc(50% - 0.8rem);
+  }
+}
+
+/* Compact mobile tweaks */
+@media (max-width: 576px) {
+  .app-hero {
+    padding: 1.2rem 1.3rem;
+  }
+
+  .app-hero__title {
+    font-size: 1.35rem;
+  }
+
+  .app-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-card,
+  .app-quick-card,
+  .app-list-card,
+  .app-status-card {
+    border-radius: 16px;
+  }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-  <div class="row">
-    <!-- Welcome Message -->
-    <div class="col-12 mb-4">
-      <div class="card bg-gradient-primary text-white overflow-hidden" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div class="d-flex align-items-start row">
-          <div class="col-sm-8">
-            <div class="card-body">
-              <h4 class="card-title text-white mb-2">👋 Hey {{ employee.name }}!</h4>
-              <p class="mb-4 text-white opacity-90">Ready to make today count? Track your time and manage your work efficiently.</p>
-              <div class="d-flex gap-2 flex-wrap">
+  <div class="row justify-content-center">
+    <div class="col-xl-9 col-lg-10 col-12">
+      <div class="app-screen">
+
+        <!-- Hero Overview -->
+        <section class="app-hero app-card">
+          <div class="d-flex flex-wrap align-items-start gap-3">
+            <div class="flex-grow-1">
+              <span class="app-chip">
+                <i class="bx bx-calendar-heart"></i>
+                Attendance Manager
+              </span>
+              <h2 class="app-hero__title">Hey {{ employee.name }}! 🎯</h2>
+              <p class="app-hero__subtitle">Stay on top of your day with quick actions, live attendance insights, and smooth interactions designed just for mobile.</p>
+
+              <div class="app-pill-actions">
                 {% if requires_face_registration %}
-                  <a href="{% url 'employees:face_register' %}?next={% url 'employees:check_in' %}" class="btn btn-light btn-lg pulse-button">
-                    <i class="bx bx-face me-1"></i>Complete Face Registration
+                  <a href="{% url 'employees:face_register' %}?next={% url 'employees:check_in' %}" class="btn btn-light text-primary">
+                    <i class="bx bx-face me-1"></i>Setup Face ID
                   </a>
-                  <span class="badge bg-light text-warning p-3 fs-6">
-                    <i class="bx bx-lock-alt me-1"></i>Check-in unlocks after setup
+                  <span class="app-chip text-warning bg-white bg-opacity-25">
+                    <i class="bx bx-lock-alt"></i> Check-in unlocks after setup
                   </span>
                 {% elif not has_checked_in_today %}
-                  <a href="{% url 'employees:check_in' %}" class="btn btn-light btn-lg pulse-button">
-                    <i class="bx bx-log-in me-1"></i>Check In Now
+                  <a href="{% url 'employees:check_in' %}" class="btn btn-light text-primary">
+                    <i class="bx bx-log-in me-1"></i>Check In
                   </a>
                 {% elif today_attendance and not today_attendance.check_out_time %}
-                  <button type="button" class="btn btn-warning btn-lg" data-bs-toggle="modal" data-bs-target="#checkoutModal">
+                  <button type="button" class="btn btn-warning text-dark" data-bs-toggle="modal" data-bs-target="#checkoutModal">
                     <i class="bx bx-log-out me-1"></i>Check Out
                   </button>
                 {% else %}
-                  <span class="badge bg-light text-success p-3 fs-6">
-                    <i class="bx bx-check-circle me-1"></i>All Done for Today!
+                  <span class="app-chip bg-white text-success bg-opacity-25">
+                    <i class="bx bx-check"></i> All done for today!
                   </span>
                 {% endif %}
+
                 <a href="{% url 'employees:attendance_calendar' %}" class="btn btn-outline-light">
-                  <i class="bx bx-calendar me-1"></i>My Calendar
+                  <i class="bx bx-calendar me-1"></i>Calendar
                 </a>
                 <a href="{% url 'employees:employee_tickets' %}" class="btn btn-outline-light">
                   <i class="bx bx-support me-1"></i>Support
                 </a>
               </div>
             </div>
-          </div>
-          <div class="col-sm-4 text-center d-none d-sm-block">
-            <div class="card-body pb-0 px-0">
-              <img src="{% static 'img/illustrations/man-with-laptop.png' %}" height="160" alt="Dashboard" style="filter: brightness(1.1);"/>
+
+            <div class="d-none d-md-block">
+              <img src="{% static 'img/illustrations/man-with-laptop.png' %}" alt="Dashboard" class="img-fluid" style="max-height: 160px; filter: drop-shadow(0 18px 28px rgba(15, 23, 42, 0.25));">
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </section>
 
-    {% if requires_face_registration %}
-      <div class="col-12 mb-4">
-        <div class="alert alert-warning d-flex flex-column flex-md-row align-items-md-center justify-content-between shadow-sm" role="alert">
-          <div class="mb-3 mb-md-0">
-            <h6 class="alert-heading text-warning mb-1"><i class="bx bx-face me-1"></i>Face Registration Required</h6>
-            <p class="mb-0 text-muted">Add your face profile to unlock check-in and check-out. It only takes a moment with your webcam.</p>
-          </div>
-          <div class="d-flex gap-2">
-            <a href="{% url 'employees:face_register' %}?next={% url 'employees:check_in' %}" class="btn btn-warning">
-              <i class="bx bx-face me-1"></i>Register Face
+        <!-- Status Snapshot -->
+        <section class="app-status-row">
+          {% if requires_face_registration %}
+            <a href="{% url 'employees:face_register' %}?next={% url 'employees:check_in' %}" class="app-status-card">
+              <div class="app-status-card__body">
+                <span class="app-status-card__icon" style="background: rgba(249, 115, 22, 0.18); color: #f97316;">
+                  <i class="bx bx-face"></i>
+                </span>
+                <div>
+                  <span class="app-status-card__title">Check-In Status</span>
+                  <div class="app-status-card__value text-warning">Face setup needed</div>
+                  <span class="app-status-card__meta text-warning"><i class="bx bx-lock"></i> Unlock check-in by registering</span>
+                </div>
+              </div>
+              <i class="bx bx-chevron-right text-muted"></i>
             </a>
-            <a href="{% url 'employees:face_register' %}?next={% url 'employees:check_in' %}" class="btn btn-outline-warning">
-              <i class="bx bx-refresh me-1"></i>Update Face
+          {% else %}
+            <a href="{% url 'employees:check_in' %}" class="app-status-card">
+              <div class="app-status-card__body">
+                <span class="app-status-card__icon" style="background: rgba(34, 197, 94, 0.15); color: #22c55e;">
+                  <i class="bx {% if has_checked_in_today %}bx-check-circle{% else %}bx-time-five{% endif %}"></i>
+                </span>
+                <div>
+                  <span class="app-status-card__title">Check-In Status</span>
+                  <div class="app-status-card__value {% if has_checked_in_today %}text-success{% else %}text-warning{% endif %}">
+                    {% if has_checked_in_today %}Checked in{% else %}Pending{% endif %}
+                  </div>
+                  <span class="app-status-card__meta">
+                    {% if has_checked_in_today %}
+                      <i class="bx bx-time"></i> {{ today_attendance.check_in_time|date:"H:i" }}
+                    {% else %}
+                      <i class="bx bx-bell"></i> Tap to mark your day
+                    {% endif %}
+                  </span>
+                </div>
+              </div>
+              <i class="bx bx-chevron-right text-muted"></i>
             </a>
-          </div>
-        </div>
-      </div>
-    {% endif %}
+          {% endif %}
 
-    <!-- Check-in Status -->
-    <div class="col-xl-4 col-md-6 col-12 mb-4">
-      {% if requires_face_registration %}
-        <a href="{% url 'employees:face_register' %}?next={% url 'employees:check_in' %}" class="text-decoration-none">
-          <div class="card h-100 stat-card border-warning" style="border-width: 2px;">
-            <div class="card-body">
-              <div class="d-flex align-items-center mb-3">
-                <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
-                  <div class="avatar-initial bg-warning rounded">
-                    <i class="bx bx-face icon-24px text-white"></i>
+          {% if requires_face_registration %}
+            <a href="{% url 'employees:face_register' %}?next={% url 'employees:check_in' %}" class="app-status-card">
+              <div class="app-status-card__body">
+                <span class="app-status-card__icon" style="background: rgba(251, 191, 36, 0.18); color: #fbbf24;">
+                  <i class="bx bx-lock-open"></i>
+                </span>
+                <div>
+                  <span class="app-status-card__title">Check-Out Status</span>
+                  <div class="app-status-card__value text-warning">Locked</div>
+                  <span class="app-status-card__meta text-warning"><i class="bx bx-timer"></i> Complete Face ID first</span>
+                </div>
+              </div>
+              <i class="bx bx-chevron-right text-muted"></i>
+            </a>
+          {% else %}
+            <div class="app-status-card">
+              <div class="app-status-card__body">
+                <span class="app-status-card__icon" style="background: rgba(14, 165, 233, 0.18); color: #0ea5e9;">
+                  <i class="bx bx-log-out"></i>
+                </span>
+                <div>
+                  <span class="app-status-card__title">Check-Out Status</span>
+                  <div class="app-status-card__value {% if today_attendance.check_out_time %}text-danger{% elif has_checked_in_today %}text-info{% else %}text-muted{% endif %}">
+                    {% if today_attendance.check_out_time %}Completed{% elif has_checked_in_today %}Active{% else %}Not started{% endif %}
                   </div>
-                </div>
-                <div class="flex-grow-1">
-                  <span class="d-block text-muted small mb-1">Check-in Status</span>
-                  <h4 class="mb-0 text-warning">Face Setup Needed</h4>
-                </div>
-              </div>
-              <div class="d-flex align-items-center justify-content-between">
-                <small class="text-warning fw-medium">
-                  <i class="bx bx-shield-quarter"></i> Register to enable check-in
-                </small>
-                <i class="bx bx-chevron-right text-muted"></i>
-              </div>
-            </div>
-          </div>
-        </a>
-      {% else %}
-        <a href="{% url 'employees:check_in' %}" class="text-decoration-none">
-          <div class="card h-100 stat-card {% if has_checked_in_today %}border-success{% else %}border-warning{% endif %}" style="border-width: 2px;">
-            <div class="card-body">
-              <div class="d-flex align-items-center mb-3">
-                <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
-                  <div class="avatar-initial {% if has_checked_in_today %}bg-success{% else %}bg-warning{% endif %} rounded">
-                    <i class="bx {% if has_checked_in_today %}bx-check-circle{% else %}bx-time-five{% endif %} icon-24px text-white"></i>
-                  </div>
-                </div>
-                <div class="flex-grow-1">
-                  <span class="d-block text-muted small mb-1">Check-in Status</span>
-                  <h4 class="mb-0 {% if has_checked_in_today %}text-success{% else %}text-warning{% endif %}">
-                    {% if has_checked_in_today %}Checked In{% else %}Pending{% endif %}
-                  </h4>
+                  <span class="app-status-card__meta">
+                    {% if today_attendance and today_attendance.check_out_time %}
+                      <i class="bx bx-time"></i> {{ today_attendance.check_out_time|date:"H:i" }}
+                    {% elif has_checked_in_today %}
+                      <i class="bx bx-loader bx-spin"></i> Working session running
+                    {% else %}
+                      <i class="bx bx-minus"></i> Check in to begin
+                    {% endif %}
+                  </span>
                 </div>
               </div>
-              <div class="d-flex align-items-center justify-content-between">
-                {% if has_checked_in_today %}
-                  <small class="text-success fw-medium">
-                    <i class="bx bx-time"></i> {{ today_attendance.check_in_time|date:"H:i" }}
-                  </small>
-                {% else %}
-                  <small class="text-warning fw-medium">
-                    <i class="bx bx-error"></i> Not checked in
-                  </small>
-                {% endif %}
-                <i class="bx bx-chevron-right text-muted"></i>
-              </div>
-            </div>
-          </div>
-        </a>
-      {% endif %}
-    </div>
-
-    <!-- Check-out Status -->
-    <div class="col-xl-4 col-md-6 col-12 mb-4">
-      {% if requires_face_registration %}
-        <a href="{% url 'employees:face_register' %}?next={% url 'employees:check_in' %}" class="text-decoration-none">
-          <div class="card h-100 stat-card border-warning" style="border-width: 2px;">
-            <div class="card-body">
-              <div class="d-flex align-items-center mb-3">
-                <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
-                  <div class="avatar-initial bg-warning rounded">
-                    <i class="bx bx-lock-open icon-24px text-white"></i>
-                  </div>
-                </div>
-                <div class="flex-grow-1">
-                  <span class="d-block text-muted small mb-1">Check-out Status</span>
-                  <h4 class="mb-0 text-warning">Unlockable After Registration</h4>
-                </div>
-              </div>
-              <div class="d-flex align-items-center justify-content-between">
-                <small class="text-warning fw-medium">
-                  <i class="bx bx-face"></i> Register your face to enable check-out
-                </small>
-                <i class="bx bx-chevron-right text-muted"></i>
-              </div>
-            </div>
-          </div>
-        </a>
-      {% else %}
-        <div class="card h-100 stat-card {% if today_attendance.check_out_time %}border-danger{% elif has_checked_in_today %}border-info{% endif %}" style="border-width: 2px;">
-          <div class="card-body">
-            <div class="d-flex align-items-center mb-3">
-              <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
-                <div class="avatar-initial {% if today_attendance.check_out_time %}bg-danger{% elif has_checked_in_today %}bg-info{% else %}bg-secondary{% endif %} rounded">
-                  <i class="bx bx-log-out icon-24px text-white"></i>
-                </div>
-              </div>
-              <div class="flex-grow-1">
-                <span class="d-block text-muted small mb-1">Check-out Status</span>
-                <h4 class="mb-0 {% if today_attendance.check_out_time %}text-danger{% elif has_checked_in_today %}text-info{% else %}text-muted{% endif %}">
-                  {% if today_attendance.check_out_time %}Completed{% elif has_checked_in_today %}Active{% else %}N/A{% endif %}
-                </h4>
-              </div>
-            </div>
-            <div class="d-flex align-items-center justify-content-between">
-              {% if today_attendance and today_attendance.check_out_time %}
-                <small class="text-danger fw-medium">
-                  <i class="bx bx-time"></i> {{ today_attendance.check_out_time|date:"H:i" }}
-                </small>
-              {% elif has_checked_in_today %}
-                <small class="text-info fw-medium">
-                  <i class="bx bx-loader bx-spin"></i> Working...
-                </small>
-              {% else %}
-                <small class="text-muted fw-medium">
-                  <i class="bx bx-minus"></i> Not started
-                </small>
-              {% endif %}
               <i class="bx bx-chevron-right text-muted"></i>
             </div>
-          </div>
-        </div>
-      {% endif %}
-    </div>
+          {% endif %}
 
-    <!-- Monthly Attendance -->
-    <div class="col-xl-4 col-md-6 col-12 mb-4">
-      <a href="{% url 'employees:attendance_calendar' %}" class="text-decoration-none">
-        <div class="card h-100 stat-card border-primary" style="border-width: 2px;">
-          <div class="card-body">
-            <div class="d-flex align-items-center mb-3">
-              <div class="avatar flex-shrink-0 me-3" style="width: 50px; height: 50px;">
-                <div class="avatar-initial bg-primary rounded">
-                  <i class="bx bx-calendar icon-24px text-white"></i>
-                </div>
-              </div>
-              <div class="flex-grow-1">
-                <span class="d-block text-muted small mb-1">This Month</span>
-                <h4 class="mb-0 text-primary">{{ total_month_attendance }} Days</h4>
+          <a href="{% url 'employees:attendance_calendar' %}" class="app-status-card">
+            <div class="app-status-card__body">
+              <span class="app-status-card__icon" style="background: rgba(79, 70, 229, 0.18); color: #4f46e5;">
+                <i class="bx bx-calendar-week"></i>
+              </span>
+              <div>
+                <span class="app-status-card__title">This Month</span>
+                <div class="app-status-card__value text-primary">{{ total_month_attendance }} days</div>
+                <span class="app-status-card__meta text-primary"><i class="bx bx-calendar-event"></i> {{ month_name }}</span>
               </div>
             </div>
-            <div class="d-flex align-items-center justify-content-between">
-              <small class="text-primary fw-medium">
-                <i class="bx bx-calendar-event"></i> {{ month_name }}
-              </small>
-              <i class="bx bx-chevron-right text-muted"></i>
-            </div>
+            <i class="bx bx-chevron-right text-muted"></i>
+          </a>
+        </section>
+
+        <!-- Quick Actions -->
+        <section class="app-section app-card">
+          <div class="app-section__header">
+            <h3 class="app-section__title">Quick actions</h3>
+            <a href="{% url 'employees:employee_profile' %}" class="app-section__link">View profile <i class="bx bx-chevron-right"></i></a>
           </div>
-        </div>
-      </a>
-    </div>
-  </div>
+          <div class="app-quick-grid">
+            <a href="{% url 'employees:attendance_calendar' %}" class="app-quick-card" style="background: radial-gradient(circle at top left, rgba(99,102,241,0.12), transparent);">
+              <span class="app-quick-card__icon" style="background: #6366f1;"><i class="bx bx-calendar"></i></span>
+              <span class="app-quick-card__title">My Calendar</span>
+              <span class="app-quick-card__desc">Daily view & schedules</span>
+            </a>
 
-  <!-- Quick Actions -->
-  <div class="row">
-    <div class="col-12 mb-4">
-      <div class="card">
-        <div class="card-header pb-3">
-          <h5 class="card-title m-0 mb-1">Quick Actions</h5>
-          <small class="text-muted">Frequently used features</small>
-        </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-xl-4 col-md-4 col-sm-6 col-12">
-              <a href="{% url 'employees:attendance_calendar' %}" class="text-decoration-none">
-                <div class="card action-card h-100">
-                  <div class="card-body text-center p-4">
-                    <div class="avatar mx-auto mb-3" style="width: 60px; height: 60px;">
-                      <div class="avatar-initial bg-label-primary rounded">
-                        <i class="bx bx-calendar" style="font-size: 28px;"></i>
-                      </div>
-                    </div>
-                    <h6 class="mb-1">My Calendar</h6>
-                    <small class="text-muted">View attendance</small>
-                  </div>
-                </div>
-              </a>
-            </div>
-            <div class="col-xl-4 col-md-4 col-sm-6 col-12">
-              <a href="{% url 'employees:my_attendance_logs' %}" class="text-decoration-none">
-                <div class="card action-card h-100">
-                  <div class="card-body text-center p-4">
-                    <div class="avatar mx-auto mb-3" style="width: 60px; height: 60px;">
-                      <div class="avatar-initial bg-label-success rounded">
-                        <i class="bx bx-history" style="font-size: 28px;"></i>
-                      </div>
-                    </div>
-                    <h6 class="mb-1">Attendance Logs</h6>
-                    <small class="text-muted">View history</small>
-                  </div>
-                </div>
-              </a>
-            </div>
-            <div class="col-xl-4 col-md-4 col-sm-6 col-12">
-              <a href="{% url 'employees:employee_tickets' %}" class="text-decoration-none">
-                <div class="card action-card h-100">
-                  <div class="card-body text-center p-4">
-                    <div class="avatar mx-auto mb-3" style="width: 60px; height: 60px;">
-                      <div class="avatar-initial bg-label-warning rounded">
-                        <i class="bx bx-support" style="font-size: 28px;"></i>
-                      </div>
-                    </div>
-                    <h6 class="mb-1">Support Tickets</h6>
-                    <small class="text-muted">Get help</small>
-                  </div>
-                </div>
-              </a>
-            </div>
-            <div class="col-xl-4 col-md-4 col-sm-6 col-12">
-              <a href="{% url 'employees:face_register' %}?next={% url 'employees:employee_dashboard' %}" class="text-decoration-none">
-                <div class="card action-card h-100 {% if requires_face_registration %}border-warning{% endif %}">
-                  <div class="card-body text-center p-4">
-                    <div class="avatar mx-auto mb-3" style="width: 60px; height: 60px;">
-                      <div class="avatar-initial {% if requires_face_registration %}bg-label-warning{% else %}bg-label-info{% endif %} rounded">
-                        <i class="bx bx-face" style="font-size: 28px;"></i>
-                      </div>
-                    </div>
-                    <h6 class="mb-1">Face Registration</h6>
-                    <small class="text-muted">Register or update your face profile</small>
-                  </div>
-                </div>
-              </a>
-            </div>
+            <a href="{% url 'employees:my_attendance_logs' %}" class="app-quick-card" style="background: radial-gradient(circle at top left, rgba(16,185,129,0.12), transparent);">
+              <span class="app-quick-card__icon" style="background: #10b981;"><i class="bx bx-history"></i></span>
+              <span class="app-quick-card__title">Attendance Logs</span>
+              <span class="app-quick-card__desc">Review recent check-ins</span>
+            </a>
+
+            <a href="{% url 'employees:employee_tickets' %}" class="app-quick-card" style="background: radial-gradient(circle at top left, rgba(234,179,8,0.14), transparent);">
+              <span class="app-quick-card__icon" style="background: #f59e0b;"><i class="bx bx-support"></i></span>
+              <span class="app-quick-card__title">Support</span>
+              <span class="app-quick-card__desc">Raise or track tickets</span>
+            </a>
+
+            <a href="{% url 'employees:face_register' %}?next={% url 'employees:employee_dashboard' %}" class="app-quick-card" style="background: radial-gradient(circle at top left, rgba(14,165,233,0.14), transparent);">
+              <span class="app-quick-card__icon" style="background: {% if requires_face_registration %}#f97316{% else %}#0ea5e9{% endif %};"><i class="bx bx-face"></i></span>
+              <span class="app-quick-card__title">Face ID</span>
+              <span class="app-quick-card__desc">{% if requires_face_registration %}Set up now{% else %}Update face profile{% endif %}</span>
+            </a>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
+        </section>
 
-  <!-- Interactive Monthly Calendar -->
+        <!-- Recent Attendance -->
+        <section class="app-section app-card">
+          <div class="app-section__header">
+            <h3 class="app-section__title">Recent attendance</h3>
+            <span class="app-chip text-primary bg-light bg-opacity-50">
+              <i class="bx bx-history"></i> Last 10 days
+            </span>
+          </div>
 
-  <!-- Recent Attendance Logs -->
-  <div class="row">
-    <div class="col-12 mb-6">
-      <div class="card h-100">
-        <div class="card-header d-flex align-items-center justify-content-between">
-          <h5 class="card-title m-0">Recent Attendance Logs</h5>
-          <span class="badge bg-label-primary">Last 10 Days</span>
-        </div>
-        <div class="card-body">
           {% if recent_attendance %}
-            <!-- Mobile Card View (visible on mobile only) -->
-            <div class="attendance-cards-mobile d-md-none">
+            <div class="attendance-feed d-md-none">
               {% for attendance in recent_attendance %}
-                <div class="attendance-card mb-3">
-                  <div class="attendance-card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                      <div>
-                        <h6 class="mb-0 fw-bold">{{ attendance.date|date:"d M Y" }}</h6>
-                        <small class="text-muted">{{ attendance.date|date:"l" }}</small>
-                      </div>
-                      <div>
-                        {% if attendance.check_out_time %}
-                          <span class="badge bg-success">Complete</span>
-                        {% else %}
-                          <span class="badge bg-warning">Incomplete</span>
-                        {% endif %}
-                      </div>
-                    </div>
+                <div class="attendance-feed__item">
+                  <div>
+                    <div class="attendance-feed__date">{{ attendance.date|date:"d M" }}</div>
+                    <div class="attendance-feed__day">{{ attendance.date|date:"l" }}</div>
                   </div>
-                  
-                  <div class="attendance-card-body">
-                    <div class="row g-2">
-                      <div class="col-6">
-                        <div class="attendance-info-box">
-                          <div class="d-flex align-items-center mb-1">
-                            <i class="bx bx-log-in text-success me-1"></i>
-                            <small class="text-muted">Check-In</small>
-                          </div>
-                          <span class="badge bg-label-success">
-                            <i class="bx bx-time-five"></i> {{ attendance.check_in_time|date:"H:i" }}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div class="col-6">
-                        <div class="attendance-info-box">
-                          <div class="d-flex align-items-center mb-1">
-                            <i class="bx bx-log-out text-danger me-1"></i>
-                            <small class="text-muted">Check-Out</small>
-                          </div>
-                          {% if attendance.check_out_time %}
-                            <span class="badge bg-label-danger">
-                              <i class="bx bx-time-five"></i> {{ attendance.check_out_time|date:"H:i" }}
-                            </span>
-                          {% else %}
-                            <span class="badge bg-label-secondary">Not yet</span>
-                          {% endif %}
-                        </div>
-                      </div>
-                      
-                      <div class="col-12">
-                        <div class="attendance-info-box text-center">
-                          <small class="text-muted d-block mb-1">Duration</small>
-                          {% if attendance.check_out_time %}
-                            <span class="text-primary fw-bold fs-5">
-                              {{ attendance.duration|default:"-" }}
-                            </span>
-                          {% else %}
-                            <span class="text-muted">-</span>
-                          {% endif %}
-                        </div>
-                      </div>
-                    </div>
+                  <div class="attendance-feed__times">
+                    <span class="attendance-feed__badge attendance-feed__badge--in">
+                      <i class="bx bx-log-in"></i>
+                      {{ attendance.check_in_time|date:"H:i" }}
+                    </span>
+                    {% if attendance.check_out_time %}
+                      <span class="attendance-feed__badge attendance-feed__badge--out">
+                        <i class="bx bx-log-out"></i>
+                        {{ attendance.check_out_time|date:"H:i" }}
+                      </span>
+                    {% else %}
+                      <span class="attendance-feed__badge attendance-feed__badge--pending">
+                        <i class="bx bx-dots-horizontal-rounded"></i>
+                        Pending
+                      </span>
+                    {% endif %}
+                  </div>
+                  <div class="attendance-feed__meta">
+                    {% if attendance.check_out_time %}
+                      <span class="attendance-feed__duration">
+                        <i class="bx bx-time-five"></i> {{ attendance.duration|default:"--" }}
+                      </span>
+                      <span class="attendance-feed__status attendance-feed__status--complete">
+                        <i class="bx bx-badge-check"></i> Complete
+                      </span>
+                    {% else %}
+                      <span class="attendance-feed__duration text-muted">
+                        <i class="bx bx-time-five"></i> --
+                      </span>
+                      <span class="attendance-feed__status attendance-feed__status--incomplete">
+                        <i class="bx bx-error"></i> Incomplete
+                      </span>
+                    {% endif %}
                   </div>
                 </div>
               {% endfor %}
             </div>
 
-            <!-- Desktop Table View (hidden on mobile) -->
             <div class="table-responsive d-none d-md-block">
-              <table class="table table-hover">
-                <thead>
+              <table class="table table-borderless align-middle mb-0">
+                <thead class="text-uppercase small text-muted">
                   <tr>
                     <th>Date</th>
                     <th>Day</th>
                     <th><i class="bx bx-log-in me-1"></i>Check-In</th>
                     <th><i class="bx bx-log-out me-1"></i>Check-Out</th>
-                    <th>Duration</th>
-                    <th>Status</th>
+                    <th class="text-center">Duration</th>
+                    <th class="text-end">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for attendance in recent_attendance %}
                     <tr>
-                      <td class="fw-medium">{{ attendance.date|date:"d M Y" }}</td>
+                      <td class="fw-semibold">{{ attendance.date|date:"d M Y" }}</td>
                       <td>{{ attendance.date|date:"l" }}</td>
                       <td>
                         <span class="badge bg-label-success">
@@ -409,19 +696,17 @@
                             <i class="bx bx-time-five"></i> {{ attendance.check_out_time|date:"H:i" }}
                           </span>
                         {% else %}
-                          <span class="badge bg-label-secondary">Not checked out</span>
+                          <span class="badge bg-label-secondary">Pending</span>
                         {% endif %}
                       </td>
-                      <td>
+                      <td class="text-center">
                         {% if attendance.check_out_time %}
-                          <span class="text-primary fw-medium">
-                            {{ attendance.duration|default:"-" }}
-                          </span>
+                          <span class="text-primary fw-semibold">{{ attendance.duration|default:"--" }}</span>
                         {% else %}
-                          <span class="text-muted">-</span>
+                          <span class="text-muted">--</span>
                         {% endif %}
                       </td>
-                      <td>
+                      <td class="text-end">
                         {% if attendance.check_out_time %}
                           <span class="badge bg-success">Complete</span>
                         {% else %}
@@ -434,71 +719,18 @@
               </table>
             </div>
           {% else %}
-            <div class="text-center py-4">
-              <i class="bx bx-calendar-x display-4 text-muted mb-3"></i>
-              <p class="text-muted">No attendance records yet this month</p>
+            <div class="app-empty">
+              <i class="bx bx-calendar-x"></i>
+              <p>No attendance records yet this month.</p>
               {% if not has_checked_in_today %}
                 <a href="{% url 'employees:check_in' %}" class="btn btn-primary btn-sm">
-                  <i class="bx bx-log-in me-1"></i>Check In for Today
+                  <i class="bx bx-log-in me-1"></i>Check in today
                 </a>
               {% endif %}
             </div>
           {% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
+        </section>
 
-  <!-- Quick Actions -->
-  <div class="row">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="card-title m-0">Quick Actions</h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-3 col-sm-6">
-              {% if not has_checked_in_today %}
-                <a href="{% url 'employees:check_in' %}" class="text-decoration-none">
-                  <div class="border rounded p-3 text-center h-100">
-                    <i class="icon-base bx bx-check-circle icon-24px text-success mb-2"></i>
-                    <h6 class="mb-1">Check In</h6>
-                  </div>
-                </a>
-              {% else %}
-                <div class="border rounded p-3 text-center h-100 bg-light">
-                  <i class="icon-base bx bx-check-circle icon-24px text-success mb-2"></i>
-                  <h6 class="mb-1">Checked In</h6>
-                </div>
-              {% endif %}
-            </div>
-            <div class="col-md-3 col-sm-6">
-              <a href="{% url 'employees:employee_profile' %}" class="text-decoration-none">
-                <div class="border rounded p-3 text-center h-100">
-                  <i class="icon-base bx bx-user icon-24px text-info mb-2"></i>
-                  <h6 class="mb-1">My Profile</h6>
-                </div>
-              </a>
-            </div>
-            <div class="col-md-3 col-sm-6">
-              <a href="{% url 'employees:logout' %}" class="text-decoration-none">
-                <div class="border rounded p-3 text-center h-100">
-                  <i class="icon-base bx bx-power-off icon-24px text-warning mb-2"></i>
-                  <h6 class="mb-1">Logout</h6>
-                </div>
-              </a>
-            </div>
-            <div class="col-md-3 col-sm-6">
-              <a href="http://127.0.0.1:8000/" class="text-decoration-none">
-                <div class="border rounded p-3 text-center h-100">
-                  <i class="icon-base bx bx-home icon-24px text-primary mb-2"></i>
-                  <h6 class="mb-1">Back to Main Site</h6>
-                </div>
-              </a>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -563,9 +795,54 @@
   </div>
 {% endblock %}
 
-{% block page_css %}
+{% block page_js %}
+{{ block.super }}
+<script>
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+  // Tooltips
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl, {
+      container: 'body',
+      trigger: 'hover focus'
+    });
+  });
+
+  // Add active class to current nav item
+  const currentPath = window.location.pathname;
+  const navLinks = document.querySelectorAll('.mobile-nav-item');
+
+  navLinks.forEach(link => {
+    if (link.getAttribute('href') === currentPath) {
+      link.classList.add('active');
+    }
+  });
+
+  // Check-Out Modal Camera Functionality
+  const checkoutModal = document.getElementById('checkoutModal');
+  if (checkoutModal) {
+    const checkoutCamera = document.getElementById('checkout-camera');
+    const checkoutCanvas = document.getElementById('checkout-canvas');
+    const checkoutPreview = document.getElementById('checkout-preview');
+    const checkoutCaptureBtn = document.getElementById('checkout-capture-btn');
+    const checkoutRetakeBtn = document.getElementById('checkout-retake-btn');
+    const checkoutSubmitBtn = document.getElementById('checkout-submit-btn');
+    const checkoutForm = document.getElementById('checkout-form');
+    const checkoutPhotoInput = document.getElementById('checkout-photo-input');
+    const checkoutCameraStatus = document.getElementById('checkout-camera-status');
+    const checkoutLatitudeInput = document.getElementById('checkout-latitude-input');
+    const checkoutLongitudeInput = document.getElementById('checkout-longitude-input');
+    
+    let checkoutStream = null;
+    let checkoutPhotoBlob = null;
+
+    // Rest of your camera functionality here...
+  }
+});
+</script>
+
 <style>
-/* Stat Cards Hover Effect */
 .stat-card {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -575,7 +852,8 @@
   transform: translateY(-8px);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
 }
-
+</style>
+{% endblock %}
 .stat-card:active {
   transform: translateY(-4px);
 }
@@ -585,6 +863,21 @@
   transition: all 0.3s ease;
   border: 2px solid transparent;
   cursor: pointer;
+}
+
+/* Mobile optimizations */
+@media (max-width: 767.98px) {
+  .stat-card {
+    margin-bottom: 1rem;
+  }
+  
+  .btn {
+    min-height: 44px;
+  }
+  
+  .table-responsive {
+    font-size: 0.9rem;
+  }
 }
 
 .action-card:hover {
@@ -1240,35 +1533,15 @@ html {
   }
 }
 </style>
-{% endblock %}
 
-{% block page_js %}
 <script>
-// Check-Out Modal Camera Functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const checkoutModal = document.getElementById('checkoutModal');
-    const checkoutCamera = document.getElementById('checkout-camera');
-    const checkoutCanvas = document.getElementById('checkout-canvas');
-    const checkoutPreview = document.getElementById('checkout-preview');
-    const checkoutCaptureBtn = document.getElementById('checkout-capture-btn');
-    const checkoutRetakeBtn = document.getElementById('checkout-retake-btn');
-    const checkoutSubmitBtn = document.getElementById('checkout-submit-btn');
-    const checkoutForm = document.getElementById('checkout-form');
-    const checkoutPhotoInput = document.getElementById('checkout-photo-input');
-    const checkoutCameraStatus = document.getElementById('checkout-camera-status');
-    const checkoutLatitudeInput = document.getElementById('checkout-latitude-input');
-    const checkoutLongitudeInput = document.getElementById('checkout-longitude-input');
-    
-    let checkoutStream = null;
-    let checkoutPhotoBlob = null;
-    
-    // Get user's current location for checkout
-    function getCheckoutLocation() {
-        return new Promise((resolve, reject) => {
-            if (!navigator.geolocation) {
-                reject(new Error('Geolocation is not supported by your browser'));
-                return;
-            }
+// Get user's current location for checkout
+function getCheckoutLocation() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('Geolocation is not supported by your browser'));
+            return;
+        }
 
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -1504,4 +1777,3 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-{% endblock %}

@@ -6,86 +6,453 @@
 {% block title %}Attendance | Kwikster CRM{% endblock %}
 
 {% block content %}
+  <style>
+    .attn-message {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      border-radius: 14px;
+      margin-bottom: 0.75rem;
+      background: rgba(148, 163, 184, 0.12);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      font-size: 0.95rem;
+      color: #1f2937;
+    }
+
+    .attn-message:last-child {
+      margin-bottom: 0;
+    }
+
+    .attn-message__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: rgba(30, 64, 175, 0.08);
+      color: #1d4ed8;
+    }
+
+    .attn-message--success {
+      background: rgba(16, 185, 129, 0.08);
+      border-color: rgba(5, 150, 105, 0.4);
+      color: #065f46;
+    }
+
+    .attn-message--success .attn-message__badge {
+      background: rgba(16, 185, 129, 0.16);
+      color: #047857;
+    }
+
+    .attn-message--warning {
+      background: rgba(249, 115, 22, 0.1);
+      border-color: rgba(234, 88, 12, 0.35);
+      color: #9a3412;
+    }
+
+    .attn-message--warning .attn-message__badge {
+      background: rgba(249, 115, 22, 0.18);
+      color: #ea580c;
+    }
+
+    .attn-message--error {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(220, 38, 38, 0.4);
+      color: #991b1b;
+    }
+
+    .attn-message--error .attn-message__badge {
+      background: rgba(239, 68, 68, 0.15);
+      color: #dc2626;
+    }
+
+    .attn-message--info {
+      background: rgba(59, 130, 246, 0.1);
+      border-color: rgba(37, 99, 235, 0.35);
+      color: #1e3a8a;
+    }
+
+    .attn-message--info .attn-message__badge {
+      background: rgba(59, 130, 246, 0.15);
+      color: #1d4ed8;
+    }
+
+    .today-attendance-card {
+      width: 100%;
+      max-width: 420px;
+      margin: 0.75rem auto 0;
+      padding: 1.1rem 1.25rem;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.18) 0%, rgba(16, 185, 129, 0.12) 100%);
+      border: 1px solid rgba(34, 197, 94, 0.28);
+      text-align: left;
+      color: #065f46;
+      box-shadow: 0 14px 30px rgba(16, 185, 129, 0.15);
+    }
+
+    .today-attendance-card__header {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    .today-attendance-card__icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(34, 197, 94, 0.18);
+      display: grid;
+      place-items: center;
+      font-size: 1.4rem;
+      color: #0f766e;
+    }
+
+    .today-attendance-card__titles {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .today-attendance-card__label {
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.01em;
+    }
+
+    .today-attendance-card__date {
+      font-size: 0.85rem;
+      color: #0f766e;
+    }
+
+    .today-attendance-card__body {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .today-attendance-card__item {
+      flex: 1 1 calc(50% - 0.75rem);
+      min-width: 140px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+      padding: 0.7rem 0.9rem;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.55);
+    }
+
+    .today-attendance-card__item .item-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #047857;
+    }
+
+    .today-attendance-card__item .item-value {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #064e3b;
+    }
+
+    .primary-action-stack {
+      display: flex;
+      justify-content: center;
+      margin: 1.05rem 0 1rem;
+    }
+
+    .primary-action-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      min-width: 180px;
+      padding: 0.75rem 1.1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 18px;
+      border: none;
+      color: #fff;
+      background: linear-gradient(135deg, #60a5fa, #2563eb);
+      box-shadow: 0 18px 38px rgba(37, 99, 235, 0.25);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .primary-action-button--checkin {
+      background: linear-gradient(135deg, #34d399, #059669);
+      box-shadow: 0 16px 32px rgba(16, 185, 129, 0.24);
+    }
+
+    .primary-action-button--checkout {
+      background: linear-gradient(135deg, #f97316, #ef4444);
+      box-shadow: 0 16px 32px rgba(249, 115, 22, 0.24);
+    }
+
+    .primary-action-button i {
+      font-size: 1.05rem;
+    }
+
+    .primary-action-button:hover,
+    .primary-action-button:focus {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 26px rgba(15, 118, 110, 0.2);
+    }
+
+    .primary-action-button--checkout:hover,
+    .primary-action-button--checkout:focus {
+      box-shadow: 0 14px 26px rgba(239, 68, 68, 0.22);
+    }
+
+    .secondary-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.6rem;
+      margin-bottom: 1.1rem;
+    }
+
+    .action-pill {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      width: 70px;
+      height: 70px;
+      padding: 0.55rem;
+      border-radius: 20px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.68rem;
+      letter-spacing: 0.02em;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      border: none;
+      text-align: center;
+    }
+
+    .action-pill i {
+      font-size: 1.15rem;
+    }
+
+    .action-pill__label {
+      display: block;
+      line-height: 1.1;
+    }
+
+    .action-pill--dashboard {
+      color: #fff;
+      background: linear-gradient(135deg, #6366f1, #4338ca);
+      box-shadow: 0 10px 22px rgba(99, 102, 241, 0.22);
+    }
+
+    .action-pill--profile {
+      color: #4338ca;
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.22);
+      box-shadow: 0 8px 18px rgba(99, 102, 241, 0.12);
+    }
+
+    .action-pill:hover,
+    .action-pill:focus {
+      transform: translateY(-2px);
+    }
+
+    @media (max-width: 576px) {
+      .attn-message {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .today-attendance-card {
+        padding: 1rem;
+        border-radius: 18px;
+      }
+
+      .today-attendance-card__body {
+        flex-direction: column;
+        gap: 0.55rem;
+      }
+
+      .today-attendance-card__item {
+        width: 100%;
+      }
+
+      .primary-action-button {
+        min-width: 85%;
+        width: auto;
+        padding: 0.7rem 1rem;
+        font-size: 0.92rem;
+        box-shadow: 0 14px 30px rgba(15, 118, 110, 0.22);
+      }
+
+      .secondary-actions {
+        gap: 0.45rem;
+      }
+
+      .action-pill {
+        flex: 0 0 64px;
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        padding: 0.45rem;
+      }
+    }
+
+    .attendance-shell {
+      border-radius: 28px;
+      overflow: hidden;
+      border: none;
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+      background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+      animation: slideInSoft 420ms ease-out;
+    }
+
+    @keyframes slideInSoft {
+      0% {
+        transform: translateY(18px);
+        opacity: 0;
+      }
+      60% {
+        transform: translateY(-6px);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(0);
+      }
+    }
+
+    .attendance-shell .card-header {
+      border-top-left-radius: 28px;
+      border-top-right-radius: 28px;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+      background: rgba(15, 23, 42, 0.02);
+    }
+
+    .attendance-shell .card-body {
+      border-bottom-left-radius: 28px;
+      border-bottom-right-radius: 28px;
+    }
+
+    @media (max-width: 576px) {
+      .attendance-shell {
+        border-radius: 22px;
+      }
+
+      .attendance-shell .card-header {
+        border-top-left-radius: 22px;
+        border-top-right-radius: 22px;
+      }
+
+      .attendance-shell .card-body {
+        border-bottom-left-radius: 22px;
+        border-bottom-right-radius: 22px;
+      }
+    }
+
+</style>
+
   <div class="row justify-content-center">
     <div class="col-xl-8 col-lg-10 col-md-12">
-      <div class="card">
+      <div class="card attendance-shell">
         <div class="card-header text-center">
           <h5 class="card-title m-0">Attendance Management</h5>
           <small class="text-muted">Manage your daily check-in and check-out</small>
         </div>
 
-        <div class="card-body">
-          {% if messages %}
-            <div class="mb-4">
-              {% for message in messages %}
-                <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-secondary{% endif %} mb-2" role="alert">
-                  {{ message }}
+        {% if messages %}
+          <div class="px-4 pt-3">
+            {% for message in messages %}
+              <div class="attn-message attn-message--{{ message.tags|default:'info' }}">
+                <span class="attn-message__badge">
+                  {% if 'success' in message.tags %}<i class="bx bx-check-circle"></i>{% elif 'warning' in message.tags %}<i class="bx bx-error"></i>{% elif 'error' in message.tags %}<i class="bx bx-x-circle"></i>{% else %}<i class="bx bx-info-circle"></i>{% endif %}
+                  {{ message.tags|default:'Info'|title }}
+                </span>
+                <span class="attn-message__text">{{ message }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="text-center mb-4">
+          <div class="avatar avatar-xl mb-3 mx-auto">
+            {% if employee.profile_picture %}
+              <img src="{{ employee.profile_picture.url }}" alt="{{ employee.name }}" class="rounded-circle">
+            {% else %}
+              <span class="avatar-initial rounded-circle bg-label-primary">
+                {{ employee.name|slice:":1"|upper }}
+              </span>
+            {% endif %}
+          </div>
+          <h4 class="mb-2">Welcome, {{ employee.name }}!</h4>
+          <p class="text-muted mb-4">
+            Manage your attendance and view your monthly calendar
+          </p>
+
+          {% if today_attendance %}
+            <div class="today-attendance-card">
+              <div class="today-attendance-card__header">
+                <span class="today-attendance-card__icon"><i class="bx bx-check"></i></span>
+                <div class="today-attendance-card__titles">
+                  <span class="today-attendance-card__label">Today's Attendance</span>
+                  <span class="today-attendance-card__date">{{ today_attendance.date|date:"d M Y, l" }}</span>
                 </div>
-              {% endfor %}
+              </div>
+              <div class="today-attendance-card__body">
+                <div class="today-attendance-card__item">
+                  <span class="item-label">Date</span>
+                  <span class="item-value">{{ today_attendance.date|date:"d M Y" }}</span>
+                </div>
+                <div class="today-attendance-card__item">
+                  <span class="item-label">Check-in</span>
+                  <span class="item-value">{{ today_attendance.check_in_time|date:"H:i:s" }}</span>
+                </div>
+                {% if today_attendance.check_out_time %}
+                  <div class="today-attendance-card__item">
+                    <span class="item-label">Check-out</span>
+                    <span class="item-value">{{ today_attendance.check_out_time|date:"H:i:s" }}</span>
+                  </div>
+                {% endif %}
+              </div>
             </div>
           {% endif %}
 
-          <div class="text-center mb-4">
-            <div class="avatar avatar-xl mb-3 mx-auto">
-              {% if employee.profile_picture %}
-                <img src="{{ employee.profile_picture.url }}" alt="{{ employee.name }}" class="rounded-circle">
-              {% else %}
-                <span class="avatar-initial rounded-circle bg-label-primary">
-                  {{ employee.name|slice:":1"|upper }}
-                </span>
-              {% endif %}
-            </div>
-            <h4 class="mb-2">Welcome, {{ employee.name }}!</h4>
-            <p class="text-muted mb-4">
-              Manage your attendance and view your monthly calendar
-            </p>
-
-            {% if today_attendance %}
-              <div class="alert alert-success">
-                <h6 class="alert-heading mb-2">
-                  <i class="icon-base bx bx-check-circle me-1"></i>Today's Attendance
-                </h6>
-                <p class="mb-1">
-                  <strong>Date:</strong> {{ today_attendance.date|date:"d M Y, l" }}
-                </p>
-                <p class="mb-1">
-                  <strong>Check-in Time:</strong> {{ today_attendance.check_in_time|date:"H:i:s" }}
-                </p>
-                {% if today_attendance.check_out_time %}
-                  <p class="mb-0">
-                    <strong>Check-out Time:</strong> {{ today_attendance.check_out_time|date:"H:i:s" }}
-                  </p>
-                {% endif %}
+          <!-- Action Buttons -->
+          <div class="primary-action-stack">
+            {% if not has_checked_in_today %}
+              <button type="button" class="primary-action-button primary-action-button--checkin" data-bs-toggle="modal" data-bs-target="#checkinModal">
+                <i class="bx bx-log-in"></i>
+                <span>Check In</span>
+              </button>
+            {% elif today_attendance and not today_attendance.check_out_time %}
+              <button type="button" class="primary-action-button primary-action-button--checkout" data-bs-toggle="modal" data-bs-target="#checkoutModal">
+                <i class="bx bx-log-out"></i>
+                <span>Check Out</span>
+              </button>
+            {% else %}
+              <div class="alert alert-info w-100 mx-4">
+                <i class="bx bx-info-circle me-1"></i>
+                You have completed your attendance for today.
               </div>
             {% endif %}
+          </div>
 
-            <!-- Action Buttons -->
-            <div class="d-flex justify-content-center gap-3 mb-4">
-              {% if not has_checked_in_today %}
-                <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#checkinModal">
-                  <i class="bx bx-log-in me-1"></i>Check In
-                </button>
-              {% elif today_attendance and not today_attendance.check_out_time %}
-                <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#checkoutModal">
-                  <i class="bx bx-log-out me-1"></i>Check Out
-                </button>
-              {% else %}
-                <div class="alert alert-info">
-                  <i class="bx bx-info-circle me-1"></i>
-                  You have completed your attendance for today.
-                </div>
-              {% endif %}
-            </div>
-
-            <!-- Navigation Buttons -->
-            <div class="d-flex justify-content-center gap-3">
-              <a href="{% url 'employees:employee_dashboard' %}" class="btn btn-primary">
-                <i class="icon-base bx bx-home me-1"></i>Back to Dashboard
-              </a>
-              <a href="{% url 'employees:employee_profile' %}" class="btn btn-outline-primary">
-                <i class="icon-base bx bx-user me-1"></i>View Profile
-              </a>
-            </div>
+          <!-- Navigation Buttons -->
+          <div class="secondary-actions">
+            <a href="{% url 'employees:employee_dashboard' %}" class="action-pill action-pill--dashboard">
+              <i class="bx bx-home"></i>
+              <span>Dashboard</span>
+            </a>
+            <a href="{% url 'employees:employee_profile' %}" class="action-pill action-pill--profile">
+              <i class="bx bx-user"></i>
+              <span>Profile</span>
+            </a>
           </div>
         </div>
       </div>

@@ -48,7 +48,12 @@ ALLOWED_HOSTS = [
     "ad677d4b76a8.ngrok-free.app",
     "*",
 ]
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://ba55bd1c71be.ngrok-free.app",
+    "https://d3e382b086a8.ngrok-free.app",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
 
 # Current DJANGO_ENVIRONMENT
 ENVIRONMENT = os.environ.get("DJANGO_ENVIRONMENT", default="local")
